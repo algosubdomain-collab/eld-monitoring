@@ -1,0 +1,7 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "eld-dashboard", "runtimeExecutable": "npm", "runtimeArgs": ["start"], "port": 3000 },
+    { "name": "eld-dev", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev"], "port": 5174 }
+  ]
+}
