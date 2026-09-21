@@ -5,7 +5,7 @@ import { networkInterfaces } from 'node:os';
 import { fileURLToPath } from 'node:url';
 
 import { config } from './config.js';
-import { loadSource } from './sources/index.js';
+import { loadSources } from './sources/index.js';
 import { summarize } from './normalize.js';
 import { getUpdates, markSent } from './updates.js';
 import { PROVIDERS, getProvider, DEFAULT_PROVIDER } from './providers.js';
@@ -30,7 +30,8 @@ const MIME = {
   '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.ico': 'image/x-icon',
 };
 
-const source = await loadSource();
+// Har bir platforma o'z manbasidan o'qiydi: sources.for(providerId).
+const sources = await loadSources();
 
 // ---------------------------------------------------------------- ma'lumot
 
@@ -44,7 +45,10 @@ async function getData({ login, provider, force = false }) {
   const cache = caches.get(key) ?? { at: 0, payload: null, error: null };
   caches.set(key, cache);
 
-  const fresh = Date.now() - cache.at < config.refreshSeconds * 1000;
+  // Fon yangilanishi keshni har aylanishda o'zi yangilaydi. Oyna ikki
+  // aylanishga teng: fon yig'ishi cho'zilgan paytda dashboard so'rovi
+  // platformaga ikkinchi to'liq yig'ishni boshlab yubormasin.
+  const fresh = Date.now() - cache.at < config.refreshSeconds * 2000;
   if (!force && fresh && cache.payload) return cache.payload;
 
   const running = inFlight.get(key);
@@ -65,6 +69,8 @@ async function refresh(login, provider, cache) {
     throw err;
   }
 
+  const source = sources.for(provider);
+
   try {
     const result = await source.fetchDrivers({
       token,
@@ -74,6 +80,12 @@ async function refresh(login, provider, cache) {
       onTokens: (t) => updateProviderTokens(login, provider, t),
     });
     const drivers = Array.isArray(result) ? result : result.drivers;
+    if (!drivers.length) {
+      // Bo'sh ro'yxatda uzilishlar tekshirilmaydi — jimgina o'tib ketmasin.
+      const r = Array.isArray(result) ? null : result.restricted;
+      console.warn(`[fon] ${login}/${provider}: platforma 0 ta haydovchi qaytardi` +
+        (r ? ` (${r.count}/${r.totalCompanies} kompaniyaga ruxsat yo'q)` : ''));
+    }
 
     cache.at = Date.now();
     cache.error = null;
@@ -113,35 +125,58 @@ async function refresh(login, provider, cache) {
  */
 function startBackgroundRefresh() {
   const everyMs = Math.max(60, config.refreshSeconds) * 1000;
+  let cycling = false;
 
   setInterval(async () => {
-    for (const conn of await allConnections()) {
-      for (const [providerId, entry] of Object.entries(conn.providers ?? {})) {
-        if (entry.expiredAt) continue;
-        try {
-          const data = await getData({ login: conn.login, provider: providerId, force: true });
-          if (!data.error) scheduleRestingCheck(conn.login, providerId, data.drivers);
-        } catch (err) {
-          if (!err.tokenInvalid) {
-            console.warn(`[fon] ${conn.login}/${providerId}: ${err.message}`);
-            continue;
-          }
-          console.log(`[fon] ${conn.login}/${providerId}: token eskirgan — ${err.message}`);
-          if (!(await markProviderExpired(conn.login, providerId, err.message))) continue;
+    // Aylanish cho'zilsa (ko'p foydalanuvchi, 429) keyingisi ustiga tushmasin.
+    if (cycling) return;
+    cycling = true;
+    const startedAt = Date.now();
+    try {
+      await backgroundCycle();
+      const took = Date.now() - startedAt;
+      // Aylanish oralig'idan uzoq cho'zilsa — uzilishlar kechroq sezila boshlaydi.
+      if (took > everyMs) console.warn(`[fon] aylanish ${Math.round(took / 1000)}s davom etdi`);
+    } catch (err) {
+      console.warn(`[fon] ${err.message}`);
+    } finally {
+      cycling = false;
+    }
+  }, everyMs).unref?.();
+}
 
-          // Guruhga aytamiz — aks holda "xabar yo'q = hammasi joyida" deb
-          // o'ylashadi, aslida kuzatuv butunlay to'xtagan bo'ladi.
-          if (conn.telegram) {
-            sendMessage(conn.telegram,
-              '<b>⚠️ Disconnect alerts paused</b>\n\n' +
-              `The ${getProvider(providerId).name} access token has expired. ` +
-              'Open the dashboard and paste a fresh token to resume monitoring.'
-            ).catch((e) => console.warn(`[telegram] ${e.message}`));
-          }
+async function backgroundCycle() {
+  for (const conn of await allConnections()) {
+    for (const [providerId, entry] of Object.entries(conn.providers ?? {})) {
+      if (entry.expiredAt) continue;
+      try {
+        const data = await getData({ login: conn.login, provider: providerId, force: true });
+        if (data.error) {
+          // Eski ma'lumot qaytdi — bu aylanishda uzilishlar tekshirilmadi.
+          console.warn(`[fon] ${conn.login}/${providerId}: yangilanmadi — ${data.error}`);
+        } else {
+          scheduleRestingCheck(conn.login, providerId, data.drivers);
+        }
+      } catch (err) {
+        if (!err.tokenInvalid) {
+          console.warn(`[fon] ${conn.login}/${providerId}: ${err.message}`);
+          continue;
+        }
+        console.log(`[fon] ${conn.login}/${providerId}: token eskirgan — ${err.message}`);
+        if (!(await markProviderExpired(conn.login, providerId, err.message))) continue;
+
+        // Guruhga aytamiz — aks holda "xabar yo'q = hammasi joyida" deb
+        // o'ylashadi, aslida kuzatuv butunlay to'xtagan bo'ladi.
+        if (conn.telegram) {
+          sendMessage(conn.telegram,
+            '<b>⚠️ Disconnect alerts paused</b>\n\n' +
+            `The ${getProvider(providerId).name} access token has expired. ` +
+            'Open the dashboard and paste a fresh token to resume monitoring.'
+          ).catch((e) => console.warn(`[telegram] ${e.message}`));
         }
       }
     }
-  }, everyMs).unref?.();
+  }
 }
 
 /**
@@ -149,6 +184,7 @@ function startBackgroundRefresh() {
  * yuzlab so'rov bir necha daqiqa oladi, uzilish tekshiruvi to'xtamasin.
  */
 function scheduleRestingCheck(login, provider, drivers) {
+  const source = sources.for(provider);
   if (!source.fetchLatestStatuses) return;
 
   const fetchLatest = async (candidates) => {
@@ -261,7 +297,7 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, {
         needsSetup: !(await hasUsers()),
         user: session ? await getUser(session.login) : null,
-        providers: PROVIDERS.map(({ id, name, site }) => ({ id, name, site })),
+        providers: PROVIDERS.map(({ id, name, site, source }) => ({ id, name, site, source })),
       });
     }
 
@@ -343,7 +379,7 @@ const server = http.createServer(async (req, res) => {
 
       if (token) {
         // Saqlashdan oldin tokenni sinab ko'ramiz — yaroqsizini qabul qilmaymiz.
-        await source.fetchDrivers({ token, provider: id, probeOnly: true });
+        await sources.for(id).fetchDrivers({ token, provider: id, probeOnly: true });
       }
       await setProviderToken(login, id, token ?? null, refreshToken ?? null);
       caches.delete(`${login}:${id}`);
@@ -364,7 +400,8 @@ const server = http.createServer(async (req, res) => {
     if (p === '/api/connections/telegram' && req.method === 'PUT') {
       const body = await readJson(req);
       if (body.botToken && body.chatId) {
-        await sendMessage(body, '<b>ELD Monitoring</b>\nConnected — disconnect alerts are on.');
+        // Foydalanuvchi javobni kutib turibdi — qayta urinmasdan darhol xatoni ko'rsatamiz.
+        await sendMessage(body, '<b>ELD Monitoring</b>\nConnected — disconnect alerts are on.', { retries: 0 });
         await setTelegram(login, body);
       } else {
         await setTelegram(login, null);
@@ -399,7 +436,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (p === '/api/health') {
-      return json(res, 200, { ok: true, source: source.name, user: login });
+      return json(res, 200, { ok: true, source: sources.label, user: login });
     }
 
     return json(res, 404, { error: 'Not found' });
@@ -417,7 +454,7 @@ if (await ensureDefaultUser()) {
 server.listen(config.port, config.host, () => {
   console.log(`ELD dashboard: http://localhost:${config.port}`);
   for (const ip of lanAddresses()) console.log(`  tarmoqda:    http://${ip}:${config.port}`);
-  console.log(`Manba: ${source.meta.name} (${source.name}) — har ${config.refreshSeconds}s yangilanadi`);
+  console.log(`Manba: ${sources.label} — har ${config.refreshSeconds}s yangilanadi`);
 });
 
 /** Bir tarmoqdagi qurilmalar uchun manzillar. */

@@ -56,10 +56,14 @@ export default function Owner({ user, onSignOut, onUnauthorized }) {
   const path = (u) => `/api/users/${encodeURIComponent(u.login)}`;
 
   const savePassword = async (u) => {
+    // O'z parolini o'zgartirsa, owner ham hamma joydan chiqariladi —
+    // keyingi so'rov 401 qaytaradi va kirish oynasi ochiladi.
     if (await call(path(u), 'PATCH', { password: newPassword })) {
       setResetFor(null);
       setNewPassword('');
-      setNotice(`Password for "${u.login}" changed — they were signed out everywhere.`);
+      setNotice(u.role === 'owner'
+        ? 'Your password was changed — sign in again with the new one.'
+        : `Password for "${u.login}" changed — they were signed out everywhere.`);
     }
   };
 
@@ -69,7 +73,9 @@ export default function Owner({ user, onSignOut, onUnauthorized }) {
     if (await call(path(u), 'DELETE')) setNotice(`User "${u.login}" deleted.`);
   };
 
-  const accounts = (users ?? []).filter((u) => u.role !== 'owner');
+  // Owner ham ro'yxatda turadi: uning paroli ham shu yerdan o'zgartiriladi.
+  // O'chirib bo'lmaydi, shuning uchun qatorida faqat "Password" tugmasi bor.
+  const accounts = [...(users ?? [])].sort((a, b) => (a.role === 'owner' ? -1 : b.role === 'owner' ? 1 : 0));
   const owner = (users ?? []).find((u) => u.role === 'owner');
 
   return (
@@ -117,7 +123,7 @@ export default function Owner({ user, onSignOut, onUnauthorized }) {
         <header>
           <div>
             <div className="eyebrow">Accounts</div>
-            <h2>{users ? `${accounts.length} user${accounts.length === 1 ? '' : 's'}` : 'Loading…'}</h2>
+            <h2>{users ? `${accounts.length} account${accounts.length === 1 ? '' : 's'}` : 'Loading…'}</h2>
           </div>
         </header>
 
@@ -131,9 +137,11 @@ export default function Owner({ user, onSignOut, onUnauthorized }) {
               <div className="setuprow">
                 <span className={`dot ${u.platforms.length ? 'on' : ''}`} />
                 <span className="meta">
-                  <span className="nm">{u.login}</span>
+                  <span className="nm">{u.login}{u.role === 'owner' ? ' · owner' : ''}</span>
                   <span className="id">
-                    {u.platforms.length ? u.platforms.join(', ') : 'No platform connected'}
+                    {u.role === 'owner'
+                      ? 'Owner account — manages users only'
+                      : u.platforms.length ? u.platforms.join(', ') : 'No platform connected'}
                     {u.expired.length ? ` · ${u.expired.join(', ')} expired` : ''}
                     {u.telegram ? ` · Telegram: ${u.telegram}` : ''}
                     {u.createdAt ? ` · added ${new Date(u.createdAt).toLocaleDateString()}` : ''}
@@ -147,14 +155,16 @@ export default function Owner({ user, onSignOut, onUnauthorized }) {
                   >
                     Password
                   </button>
-                  <button
-                    className={`btn sm ${confirmDelete === u.login ? 'confirm' : ''}`}
-                    disabled={busy}
-                    onClick={() => remove(u)}
-                    onBlur={() => setConfirmDelete(null)}
-                  >
-                    {confirmDelete === u.login ? 'Confirm delete' : 'Delete'}
-                  </button>
+                  {u.role !== 'owner' && (
+                    <button
+                      className={`btn sm ${confirmDelete === u.login ? 'confirm' : ''}`}
+                      disabled={busy}
+                      onClick={() => remove(u)}
+                      onBlur={() => setConfirmDelete(null)}
+                    >
+                      {confirmDelete === u.login ? 'Confirm delete' : 'Delete'}
+                    </button>
+                  )}
                 </span>
               </div>
 
@@ -180,7 +190,8 @@ export default function Owner({ user, onSignOut, onUnauthorized }) {
 
       {owner && (
         <p className="ownerfoot">
-          Owner password: <code>npm run user:reset -- {owner.login} &lt;new-password&gt;</code>
+          Locked out? Reset any password from the server:{' '}
+          <code>npm run user:reset -- {owner.login} &lt;new-password&gt;</code>
         </p>
       )}
     </div>

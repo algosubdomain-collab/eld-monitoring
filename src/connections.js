@@ -45,6 +45,8 @@ export async function getConnectionStatus(login) {
       id: p.id,
       name: p.name,
       site: p.site,
+      // Interfeys tokenni qayerdan olishni shunga qarab tushuntiradi.
+      source: p.source,
       connected: Boolean(conn.providers?.[p.id]?.token) && !conn.providers?.[p.id]?.expiredAt,
       expired: Boolean(conn.providers?.[p.id]?.expiredAt),
       connectedAt: conn.providers?.[p.id]?.connectedAt ?? null,

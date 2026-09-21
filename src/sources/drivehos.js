@@ -23,6 +23,8 @@ const MAX_RETRIES = Number(process.env.ELD_MAX_RETRIES ?? 8);
 // Kutish shu qiymatdan oshmaydi — aks holda bitta omadsiz kompaniya
 // butun yangilanishni yarim daqiqaga cho'zib yuborardi.
 const MAX_BACKOFF_MS = 5000;
+// Javobsiz qolgan so'rov butun yangilanishni (va fon tsiklini) ushlab turmasin.
+const REQUEST_TIMEOUT_MS = Number(process.env.ELD_REQUEST_TIMEOUT_SEC ?? 30) * 1000;
 
 export const meta = { name: 'DriveHOS', live: true, requiresToken: true };
 
@@ -70,6 +72,7 @@ async function refreshAccessToken(ctx) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', tenant_id: ctx.tenantId },
       body: JSON.stringify({ refresh_token: ctx.refreshToken }),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
     const body = await res.json().catch(() => null);
     const data = body?.data ?? {};
@@ -116,7 +119,20 @@ async function api(path, ctx, companyId, attempt = 0) {
   // Qaysi token bilan yuborilganini eslab qolamiz: javob kelguncha boshqa
   // so'rov tokenni yangilagan bo'lsa, qayta yangilash shart emas.
   const usedToken = ctx.token;
-  const res = await fetch(BASE + path, { headers: headers(usedToken, ctx.tenantId, companyId) });
+  let res;
+  try {
+    res = await fetch(BASE + path, {
+      headers: headers(usedToken, ctx.tenantId, companyId),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+  } catch (err) {
+    // Timeout yoki tarmoq uzilishi — qayta urinamiz.
+    if (attempt < MAX_RETRIES) {
+      await sleep(Math.min(400 * 2 ** attempt, MAX_BACKOFF_MS) + Math.random() * 400);
+      return api(path, ctx, companyId, attempt + 1);
+    }
+    throw new Error(`${path} — ${err.name === 'TimeoutError' ? 'javob kelmadi (timeout)' : err.message}`);
+  }
 
   // 401/403 har doim ham "token o'lgan" degani emas — gateway yuk ostida
   // ham shunday qaytarishi mumkin. Foydalanuvchini bekordan-bekorga
@@ -189,11 +205,25 @@ async function getProfiles(ctx) {
   return new Map(rows.map((r) => [r.driver_id, r]));
 }
 
-// Kesh provayder bo'yicha ajratiladi — tenantlar har xil kompaniyalarga ega.
+// Kesh provayder VA platforma akkaunti bo'yicha ajratiladi: bir serverda
+// bir nechta foydalanuvchi bo'lsa, har birining akkaunti boshqa kompaniyalarni
+// ko'radi. Faqat provayder bo'yicha bo'lsa, biri ikkinchisining ro'yxatini
+// olib, "no access" bilan haydovchilarsiz qolardi.
 const companyCaches = new Map();
 
+/** Token egasi (JWT user_id) — token yangilansa ham o'zgarmaydi. */
+function accountId(token) {
+  try {
+    const payload = JSON.parse(Buffer.from(String(token).split('.')[1], 'base64url').toString());
+    if (payload?.user_id ?? payload?.sub) return String(payload.user_id ?? payload.sub);
+  } catch { /* JWT emas */ }
+  return String(token);
+}
+
+const companyCacheKey = (ctx) => `${ctx.providerId}:${accountId(ctx.token)}`;
+
 async function getCompanies(ctx) {
-  const cached = companyCaches.get(ctx.providerId);
+  const cached = companyCaches.get(companyCacheKey(ctx));
   if (cached && Date.now() - cached.at < COMPANY_TTL_MS) return cached.list;
 
   const rows = await fetchAllPages(
@@ -204,7 +234,7 @@ async function getCompanies(ctx) {
   const list = rows.map((c) => ({
     id: c.company_id, name: c.company_name, drivers: c.active_driver ?? 0,
   }));
-  companyCaches.set(ctx.providerId, { at: Date.now(), list });
+  companyCaches.set(companyCacheKey(ctx), { at: Date.now(), list });
   return list;
 }
 
@@ -280,7 +310,7 @@ export async function fetchDrivers({
   // Tokenni saqlashdan oldin tekshirish: bitta yengil so'rov yetarli,
   // butun parkni yig'ib o'tirishning hojati yo'q.
   if (probeOnly) {
-    companyCaches.delete(chosen.id);
+    companyCaches.delete(companyCacheKey(ctx));
     const list = await getCompanies(ctx);
     return { provider: { id: chosen.id, name: chosen.name }, drivers: [], companies: list.length };
   }

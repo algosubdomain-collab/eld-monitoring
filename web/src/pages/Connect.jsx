@@ -179,11 +179,14 @@ export default function Connect({ status, onChange, onReady, onSignOut, standalo
 
         {openProvider && (() => {
           const p = status.providers.find((x) => x.id === openProvider);
-          // Ikkala tokenni birdan oladi: access qisqa muddatli, refresh esa
-          // uni avtomatik yangilab turish uchun.
-          const helper =
-            "copy(JSON.stringify({access_token:localStorage.access_token," +
-            "refresh_token:localStorage.refresh_token}))";
+          // Leader/Factor ELD ikkala tokenni birdan beradi: access qisqa
+          // muddatli, refresh esa uni avtomatik yangilab turish uchun.
+          // Five ELD da bitta token bo'ladi (localStorage "token").
+          const single = p.source === 'fiveeld';
+          const helper = single
+            ? 'copy(localStorage.token)'
+            : "copy(JSON.stringify({access_token:localStorage.access_token," +
+              "refresh_token:localStorage.refresh_token}))";
 
           const copyHelper = async () => {
             try {
@@ -222,8 +225,10 @@ export default function Connect({ status, onChange, onReady, onSignOut, standalo
                       {copied ? 'Copied' : 'Copy'}
                     </button>
                   </div>
-                  It copies both tokens at once — the second one keeps the
-                  connection alive so you do not have to repeat this every day.
+                  {single
+                    ? 'It copies the token this platform keeps for your session.'
+                    : 'It copies both tokens at once — the second one keeps the '
+                      + 'connection alive so you do not have to repeat this every day.'}
                 </li>
                 <li>Come back here and paste it below.</li>
               </ol>

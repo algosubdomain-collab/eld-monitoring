@@ -89,7 +89,7 @@ export default function Tiered({ data, kind }) {
                         {initials(d.driverName)}
                       </span>
                       <span className="meta">
-                        <DriverName name={d.driverName} />
+                        <DriverName name={d.driverName} driver={d} />
                         <span className="id">{d.company} · {d.truck}</span>
                       </span>
                       <span style={{ flex: 1 }} />

@@ -5,7 +5,7 @@ export const Driver = ({ d }) => (
   <div className="who">
     <span className="av" style={{ background: avatarPaint(d.driverName) }}>{initials(d.driverName)}</span>
     <span>
-      <DriverName name={d.driverName} />
+      <DriverName name={d.driverName} driver={d} />
       <div className="id mono">{d.driverId || '—'}</div>
     </span>
   </div>

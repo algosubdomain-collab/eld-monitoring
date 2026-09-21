@@ -1,59 +1,59 @@
 /* =========================================================
-   Vizual til: och kulrang kanvas ustida qora "widget" kartalar,
-   lime-yashil glow, dot-matrix raqamlar, to'q sariq ogohlantirish.
+   Vizual til: sokin qora fon, yupqa chiziqli kartalar, oddiy
+   raqamlar. Rang faqat ma'noni bildirish uchun — bezak emas.
    ========================================================= */
 :root{
-  --canvas:#eceeef;
-  --canvas-2:#e2e5e6;
+  --canvas:#0e1113;
+  --canvas-2:#0e1113;
 
-  --card:#131618;
-  --card-2:#1b1f22;
-  --card-3:#22272b;
-  --line:#282e33;
+  --card:#16191c;
+  --card-2:#1c2023;
+  --card-3:#23282c;
+  --line:#272c31;
 
-  --ink:#f4f7f9;
-  --ink-2:#a5aeb6;
-  --ink-3:#697079;
-  --on-canvas:#3a4148;
+  --ink:#eef1f3;
+  --ink-2:#9aa3ab;
+  --ink-3:#6b737b;
+  --on-canvas:#dfe4e8;
 
-  --lime:#bdf23c;
-  --lime-deep:#8fd117;
-  --amber:#ff9327;
-  --violet:#a78bfa;
+  --lime:#9fd356;
+  --lime-deep:#7fb43a;
+  --amber:#e0913f;
+  --violet:#9b8cf0;
   --slate:#8894a1;
-  --red:#ff5d67;
+  --red:#e0646d;
 
-  --r-lg:30px;
-  --r-md:20px;
-  --r-sm:14px;
+  --r-lg:14px;
+  --r-md:12px;
+  --r-sm:9px;
 
-  --lift:0 30px 60px -22px rgba(15,20,25,.42), 0 10px 24px -14px rgba(15,20,25,.3);
-  --inner:inset 0 1px 0 rgba(255,255,255,.045);
+  /* Soya deyarli yo'q — chuqurlikni chiziq beradi. */
+  --lift:0 1px 2px rgba(0,0,0,.28);
+  --inner:0 0 0 0 transparent;
 }
 
 *{box-sizing:border-box}
 html{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 body{
   margin:0;
-  background:radial-gradient(120% 90% at 50% 0%, var(--canvas) 0%, var(--canvas-2) 100%) fixed;
+  background:var(--canvas);
   color:var(--ink);
   font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   font-size:14px;line-height:1.5;letter-spacing:-.006em;
 }
 .mono{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums}
 
-/* Dot-matrix matn: harflar nuqtalar bilan to'ldiriladi (tabloga o'xshash) */
+/* Scrollbar ham qora fonga mos bo'lsin — standart oq chiziq ajralib turardi. */
+*{scrollbar-width:thin;scrollbar-color:#2e353b transparent}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#2e353b;border-radius:999px;border:3px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-thumb:hover{background:#3a424a;background-clip:content-box}
+
+/* Raqamlar — oddiy va tiniq. Avval LED tablo effekti bor edi, u o'qishni
+   qiyinlashtirardi; endi bir xil kenglikdagi (tabular) raqamlar. */
 .dotmatrix{
-  font-weight:900;letter-spacing:.04em;
-  /* Nuqtalar deyarli tegib turadi — LED tablo ko'rinishi saqlanadi, lekin
-     raqamlar tiniq o'qiladi.
-     To'r o'lchamiga ehtiyot bo'ling: 3.6px da ba'zi ekran masshtablarida
-     background-clip:text rasterizatsiyasi buzilib, raqamlar butunlay
-     ko'rinmay qolgan edi. 4px — sinovdan o'tgan xavfsiz eng kichik qiymat. */
-  background-image:radial-gradient(circle at 50% 50%, currentColor 48%, transparent 50%);
-  background-size:4px 4px;
-  -webkit-background-clip:text;background-clip:text;
-  -webkit-text-fill-color:transparent;color:var(--ink);
+  font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--ink);
 }
 .dotmatrix.lime{color:var(--lime)}
 .dotmatrix.amber{color:var(--amber)}
@@ -61,63 +61,57 @@ body{
 
 /* ---------- Karta ---------- */
 .card{
-  position:relative;background:var(--card);border-radius:var(--r-lg);
-  box-shadow:var(--lift),var(--inner);overflow:hidden;
-}
-.card::before{ /* nozik nuqtali tekstura */
-  content:"";position:absolute;inset:0;pointer-events:none;
-  background-image:radial-gradient(rgba(255,255,255,.05) 1px, transparent 1px);
-  background-size:7px 7px;opacity:.65;
+  position:relative;background:var(--card);border:1px solid var(--line);
+  border-radius:var(--r-lg);box-shadow:var(--lift);overflow:hidden;
 }
 .card > *{position:relative}
 
-/* Pastdan chiqib turgan lime tasma (referens uslub) */
+/* Manba haqidagi qator — ilgari yorqin lime tasma edi, endi oddiy izoh. */
 .shelf{
-  margin-top:-26px;padding:32px 24px 13px;border-radius:var(--r-lg);
-  background:linear-gradient(180deg,var(--lime),var(--lime-deep));
-  color:#10160a;font-weight:650;font-size:13.5px;letter-spacing:-.01em;
-  display:flex;align-items:center;justify-content:center;gap:9px;
-  box-shadow:0 22px 44px -22px rgba(150,210,30,.85);
+  margin-top:10px;padding:9px 14px;border-radius:var(--r-md);
+  background:var(--card);border:1px solid var(--line);
+  color:var(--ink-2);font-weight:500;font-size:12.5px;
+  display:flex;align-items:center;justify-content:center;gap:8px;
 }
+.shelf svg{width:13px;height:13px;color:var(--lime)}
 
-.page{max-width:1520px;margin:0 auto;padding:26px 26px 56px}
+.page{max-width:1420px;margin:0 auto;padding:22px 22px 48px}
 
 .masthead{display:flex;align-items:center;gap:12px;margin:0 4px 20px}
 .masthead .logo{
-  width:34px;height:34px;border-radius:11px;display:grid;place-items:center;flex:none;
-  background:var(--card);color:var(--lime);box-shadow:var(--lift);
+  width:32px;height:32px;border-radius:9px;display:grid;place-items:center;flex:none;
+  background:var(--card);border:1px solid var(--line);color:var(--lime);
 }
 .masthead .logo svg{width:17px;height:17px}
-.masthead h1{margin:0;font-size:16px;font-weight:750;letter-spacing:-.02em;color:var(--on-canvas)}
+.masthead h1{margin:0;font-size:15px;font-weight:600;letter-spacing:-.01em;color:var(--on-canvas)}
 .masthead .beat{
-  display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:#7b848c;
+  display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:500;color:var(--ink-3);
 }
-.masthead .beat i{width:7px;height:7px;border-radius:50%;background:var(--lime-deep);
-  box-shadow:0 0 9px var(--lime-deep);animation:beat 2.2s ease-in-out infinite}
-.masthead .beat.off i{background:var(--amber);box-shadow:0 0 9px var(--amber);animation:none}
+.masthead .beat i{width:6px;height:6px;border-radius:50%;background:var(--lime);
+  animation:beat 2.2s ease-in-out infinite}
+.masthead .beat.off i{background:var(--amber);animation:none}
 @keyframes beat{50%{opacity:.35}}
 
 /* ---------- Hero ---------- */
-.hero{display:grid;grid-template-columns:1fr auto;gap:20px;padding:24px 26px 26px;align-items:start}
-.hero .eyebrow{font-size:11.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
-.hero .title{display:flex;align-items:baseline;gap:16px;margin-top:9px}
-.hero .count{font-size:62px;line-height:.9}
-.hero .unit{font-size:20px;font-weight:750;letter-spacing:-.02em;color:var(--ink-2)}
-.hero .sub{margin-top:8px;font-size:13px;color:var(--ink-3)}
+.hero{display:grid;grid-template-columns:1fr auto;gap:20px;padding:20px 22px;align-items:start}
+.hero .eyebrow{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+.hero .title{display:flex;align-items:baseline;gap:12px;margin-top:8px}
+.hero .count{font-size:40px;line-height:1}
+.hero .unit{font-size:15px;font-weight:600;letter-spacing:.02em;color:var(--ink-2)}
+.hero .sub{margin-top:6px;font-size:13px;color:var(--ink-3)}
 
 .panel{
-  background:var(--card-2);border-radius:var(--r-md);padding:15px 17px;min-width:246px;
-  box-shadow:var(--inner);
+  background:var(--card-2);border:1px solid var(--line);border-radius:var(--r-md);
+  padding:13px 15px;min-width:238px;
 }
 .panel .row{display:flex;align-items:center;justify-content:space-between;gap:14px}
-.panel .big{font-size:19px;font-weight:750;letter-spacing:-.02em}
+.panel .big{font-size:17px;font-weight:600;letter-spacing:-.01em}
 .panel .lbl{font-size:12.5px;color:var(--ink-3);margin-top:2px}
 .panel .flag{
-  margin-top:11px;padding:7px 11px;border-radius:11px;font-size:12.5px;font-weight:700;
-  letter-spacing:.02em;text-transform:uppercase;
-  background:color-mix(in srgb,var(--amber) 15%,transparent);color:var(--amber);
+  margin-top:10px;padding:6px 10px;border-radius:var(--r-sm);font-size:12.5px;font-weight:500;
+  background:var(--card-3);color:var(--amber);
 }
-.panel .flag.ok{background:color-mix(in srgb,var(--lime) 14%,transparent);color:var(--lime)}
+.panel .flag.ok{color:var(--lime)}
 
 .iconbtn{
   width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;
@@ -127,111 +121,108 @@ body{
 .iconbtn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;
              stroke-linecap:round;stroke-linejoin:round}
 
-/* ---------- Glow progress ---------- */
+/* ---------- Yo'ldagilar ulushi ---------- */
+/* Ilgari bu porlab turgan baland tasma edi, ichida truck belgisi yugurardi.
+   Endi oddiy yupqa chiziq va yonida raqam. */
 .rail{
-  margin:0 26px 26px;height:56px;border-radius:999px;background:var(--card-2);
-  box-shadow:var(--inner);display:flex;align-items:center;padding:6px;position:relative;
+  margin:0 22px 20px;display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center;
 }
 .rail .fill{
-  height:100%;min-width:56px;border-radius:999px;
-  background:linear-gradient(95deg,var(--lime-deep),var(--lime));
-  box-shadow:0 0 30px 4px color-mix(in srgb,var(--lime) 45%,transparent),
-             inset 0 1px 0 rgba(255,255,255,.35);
-  display:flex;align-items:center;justify-content:flex-end;padding-right:16px;
-  transition:width .7s cubic-bezier(.4,0,.2,1);
+  height:6px;min-width:6px;border-radius:999px;background:var(--lime);
+  transition:width .5s cubic-bezier(.4,0,.2,1);
 }
-.rail .fill svg{width:20px;height:20px;fill:#10160a}
-.rail .cap{
-  position:absolute;right:24px;font-size:14px;font-weight:700;color:var(--ink-3);letter-spacing:.02em;
-}
+.rail .fill svg{display:none}
+.rail .cap{font-size:12.5px;font-weight:500;color:var(--ink-3);font-variant-numeric:tabular-nums}
 
 /* ---------- Stat gridi ---------- */
-.stats{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));margin:20px 0}
+.stats{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(152px,1fr));margin:16px 0}
 .stat{
   display:block;text-decoration:none;color:inherit;cursor:pointer;
-  padding:16px 18px 17px;border-radius:var(--r-md);background:var(--card);
-  box-shadow:var(--lift),var(--inner);position:relative;overflow:hidden;transition:.18s;
+  padding:14px 16px;border-radius:var(--r-md);background:var(--card);
+  border:1px solid var(--line);position:relative;overflow:hidden;transition:border-color .15s;
 }
-.stat:hover{transform:translateY(-2px);box-shadow:var(--lift),var(--inner),0 0 0 1px rgba(255,255,255,.07)}
-.stat:focus-visible{outline:2px solid var(--lime);outline-offset:3px}
+.stat:hover{border-color:#394046}
+.stat:focus-visible{outline:2px solid var(--lime);outline-offset:2px}
 /* Bosiladiganini bildiruvchi strelka — faqat hover'da chiqadi */
-.stat .go{position:absolute;right:15px;bottom:14px;width:22px;height:22px;border-radius:50%;
-  display:grid;place-items:center;background:var(--card-3);color:var(--ink-2);
-  opacity:0;transform:translateX(-4px);transition:.18s}
-.stat .go svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.2;
+.stat .go{position:absolute;right:14px;bottom:13px;width:20px;height:20px;border-radius:50%;
+  display:grid;place-items:center;color:var(--ink-3);
+  opacity:0;transform:translateX(-3px);transition:.15s}
+.stat .go svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;
   stroke-linecap:round;stroke-linejoin:round}
 .stat:hover .go{opacity:1;transform:none}
-.stat::before{content:"";position:absolute;inset:0;pointer-events:none;
-  background-image:radial-gradient(rgba(255,255,255,.05) 1px,transparent 1px);background-size:7px 7px;opacity:.6}
 .stat > *{position:relative}
-.stat .k{font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
-.stat .v{font-size:38px;line-height:1;margin-top:10px}
-.stat .s{font-size:12px;color:var(--ink-3);margin-top:7px}
-.stat .tick{position:absolute;right:16px;top:16px;width:8px;height:8px;border-radius:50%}
+.stat .k{font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.stat .v{font-size:30px;line-height:1;margin-top:8px}
+.stat .s{font-size:12px;color:var(--ink-3);margin-top:6px}
+/* Rangli nuqta — glow'siz, shunchaki belgi. Porlash inline style'dan keladi,
+   shuning uchun uni shu yerda bekor qilamiz. */
+.stat .tick{position:absolute;right:15px;top:15px;width:7px;height:7px;border-radius:50%;
+  box-shadow:none !important}
 
 /* ---------- Boshqaruv paneli ---------- */
 .controls{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
 .field{position:relative;display:flex;align-items:center}
 .field svg{position:absolute;left:14px;width:15px;height:15px;stroke:var(--ink-3);fill:none;stroke-width:2}
 .field input{
-  font:inherit;color:var(--ink);background:var(--card);border:none;border-radius:999px;
-  padding:10px 15px 10px 37px;min-width:238px;flex:1 1 238px;max-width:340px;box-shadow:var(--lift),var(--inner);transition:.15s;
+  font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:var(--r-sm);
+  padding:9px 14px 9px 36px;min-width:238px;flex:1 1 238px;max-width:340px;transition:border-color .15s;
 }
 .field input::placeholder{color:var(--ink-3)}
-.field input:focus{outline:none;box-shadow:var(--lift),0 0 0 2px color-mix(in srgb,var(--lime) 55%,transparent)}
+.field input:focus{outline:none;border-color:var(--lime)}
 
 /* Joy yetmasa filtrlar o'z ichida gorizontal siljiydi, qatorni buzmaydi. */
-.segs{display:flex;gap:4px;padding:5px;background:var(--card);border-radius:999px;
-      box-shadow:var(--lift),var(--inner);overflow-x:auto;scrollbar-width:none}
+.segs{display:flex;gap:2px;padding:3px;background:var(--card);border:1px solid var(--line);
+      border-radius:var(--r-sm);overflow-x:auto;scrollbar-width:none}
 .segs::-webkit-scrollbar{display:none}
 .seg{
-  font:inherit;font-size:13px;font-weight:600;color:var(--ink-2);background:none;border:none;
-  padding:7px 12px;border-radius:999px;cursor:pointer;display:flex;align-items:center;gap:6px;
+  font:inherit;font-size:13px;font-weight:500;color:var(--ink-2);background:none;border:none;
+  padding:6px 11px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:6px;
   transition:.15s;flex:none;white-space:nowrap;
 }
 .seg:hover{background:var(--card-3);color:var(--ink)}
-.seg.on{background:var(--lime);color:#10160a;box-shadow:0 0 20px -2px color-mix(in srgb,var(--lime) 60%,transparent)}
-.seg .n{font-size:11.5px;font-weight:700;opacity:.6;font-variant-numeric:tabular-nums}
-.seg.on .n{opacity:.7}
+.seg.on{background:var(--card-3);color:var(--ink);box-shadow:inset 0 -2px 0 var(--lime)}
+.seg .n{font-size:11.5px;font-weight:600;opacity:.55;font-variant-numeric:tabular-nums}
+.seg.on .n{opacity:.8}
 
 .btn{
-  font:inherit;font-size:13px;font-weight:600;color:var(--ink-2);background:var(--card);border:none;
-  border-radius:999px;padding:10px 14px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;
-  box-shadow:var(--lift),var(--inner);transition:.15s;white-space:nowrap;
+  font:inherit;font-size:13px;font-weight:500;color:var(--ink-2);background:var(--card);
+  border:1px solid var(--line);border-radius:var(--r-sm);padding:9px 13px;cursor:pointer;
+  display:inline-flex;align-items:center;gap:7px;transition:.15s;white-space:nowrap;
 }
-.btn:hover{color:var(--ink)}
+.btn:hover{color:var(--ink);border-color:#394046}
 .btn:active{transform:translateY(1px)}
 .btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.btn.lime{background:var(--lime);color:#10160a;box-shadow:var(--lift),0 0 24px -4px color-mix(in srgb,var(--lime) 65%,transparent)}
+.btn.lime{background:var(--lime);border-color:var(--lime);color:#111a06;font-weight:600}
+.btn.lime:hover{background:var(--lime-deep);border-color:var(--lime-deep);color:#111a06}
 /* Tasdiq holati — tasodifiy bosishdan himoya */
-.btn.confirm{background:var(--amber);color:#1a1206;
-  box-shadow:var(--lift),0 0 26px -4px color-mix(in srgb,var(--amber) 70%,transparent);
+.btn.confirm{background:var(--amber);border-color:var(--amber);color:#1a1206;
   animation:nudge .3s ease}
 @keyframes nudge{40%{transform:translateX(-2px)}70%{transform:translateX(2px)}}
 
 .menu{position:relative}
 .menu .pop{
-  position:absolute;right:0;top:calc(100% + 8px);z-index:40;min-width:210px;padding:8px;
-  background:var(--card-2);border-radius:var(--r-md);box-shadow:var(--lift),var(--inner);
+  position:absolute;right:0;top:calc(100% + 6px);z-index:40;min-width:210px;padding:6px;
+  background:var(--card-2);border:1px solid var(--line);border-radius:var(--r-md);
+  box-shadow:0 8px 20px -10px rgba(0,0,0,.6);
 }
-.menu .pop label{display:flex;align-items:center;gap:10px;padding:8px 11px;border-radius:11px;
+.menu .pop label{display:flex;align-items:center;gap:10px;padding:8px 11px;border-radius:7px;
                  font-size:13px;color:var(--ink-2);cursor:pointer}
 .menu .pop label:hover{background:var(--card-3);color:var(--ink)}
 .menu .pop input{accent-color:var(--lime);width:14px;height:14px}
-.switch{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:600;color:var(--ink-2);
-        cursor:pointer;background:var(--card);border-radius:999px;padding:10px 15px;
-        box-shadow:var(--lift),var(--inner)}
+.switch{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:500;color:var(--ink-2);
+        cursor:pointer;background:var(--card);border:1px solid var(--line);
+        border-radius:var(--r-sm);padding:9px 13px}
 .switch:hover{color:var(--ink)}
 .switch input{accent-color:var(--lime);width:15px;height:15px}
 
 /* ---------- Jadval ---------- */
 /* Jadval o'z ichida scroll qiladi -> sarlavha qatori doim ko'rinib turadi.
    Balandlik tepadagi hero+stat+boshqaruv balandligiga qarab hisoblanadi. */
-.tablewrap{overflow:auto;max-height:calc(100vh - 470px);min-height:260px}
+.tablewrap{overflow:auto;max-height:calc(100vh - 420px);min-height:260px}
 table{border-collapse:separate;border-spacing:0;width:100%;min-width:1040px}
 thead th{
-  font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);
-  text-align:left;padding:14px 16px;background:var(--card);position:sticky;top:0;z-index:5;
+  font-size:10.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);
+  text-align:left;padding:12px 16px;background:var(--card);position:sticky;top:0;z-index:5;
   cursor:pointer;user-select:none;white-space:nowrap;transition:.15s;
   border-bottom:1px solid var(--line);
 }
@@ -244,22 +235,22 @@ tbody tr:last-child td{border-bottom:none}
 tbody tr.flagged td:first-child{box-shadow:inset 3px 0 0 var(--amber)}
 
 .who{display:flex;align-items:center;gap:12px}
-.av{width:36px;height:36px;border-radius:12px;flex:none;display:grid;place-items:center;
-    font-size:12px;font-weight:800;color:#10160a}
-.nm{font-weight:650;letter-spacing:-.01em}
-/* O'ng tugma ism ustida — nusxalash. Buni bildirib turish uchun kursor. */
+.av{width:32px;height:32px;border-radius:9px;flex:none;display:grid;place-items:center;
+    font-size:12px;font-weight:700;color:#10160a}
+.nm{font-weight:600;letter-spacing:-.01em}
+/* Ism ustida chap tugma — platformadagi log sahifasi, o'ng tugma — nusxalash. */
 .copyable{cursor:context-menu;border-radius:5px;transition:background .12s}
-.copyable:hover{background:color-mix(in srgb,var(--lime) 16%,transparent);
-                box-shadow:0 0 0 3px color-mix(in srgb,var(--lime) 16%,transparent)}
+.copyable:hover{background:var(--card-3)}
+a.nm.link{color:inherit;text-decoration:none;cursor:pointer}
+a.nm.link:hover{color:var(--lime);text-decoration:underline;text-underline-offset:3px}
 .id{font-size:11.5px;color:var(--ink-3);margin-top:1px;letter-spacing:.04em}
 
 .pill{
-  display:inline-flex;align-items:center;gap:7px;padding:6px 13px 6px 10px;border-radius:999px;
-  font-size:12.5px;font-weight:650;
-  background:color-mix(in srgb,var(--c) 14%,transparent);color:var(--c);
+  display:inline-flex;align-items:center;gap:7px;padding:4px 11px 4px 9px;border-radius:999px;
+  font-size:12.5px;font-weight:500;
+  background:color-mix(in srgb,var(--c) 12%,transparent);color:var(--c);
 }
-.pill i{width:7px;height:7px;border-radius:50%;background:var(--c);flex:none;
-        box-shadow:0 0 9px color-mix(in srgb,var(--c) 85%,transparent)}
+.pill i{width:6px;height:6px;border-radius:50%;background:var(--c);flex:none}
 
 .hrs{min-width:112px}
 .hrs .t{font-size:13.5px;font-weight:650;letter-spacing:-.01em}
@@ -277,16 +268,17 @@ tbody tr.flagged td:first-child{box-shadow:inset 3px 0 0 var(--amber)}
 .nil{color:var(--ink-3)}
 
 .banner{
-  display:flex;gap:11px;align-items:flex-start;padding:15px 18px;border-radius:var(--r-md);margin-bottom:18px;
-  background:color-mix(in srgb,var(--red) 13%,var(--card));color:var(--red);font-size:13.5px;
-  box-shadow:var(--lift);
+  display:flex;gap:11px;align-items:flex-start;padding:13px 16px;border-radius:var(--r-md);margin-bottom:16px;
+  background:color-mix(in srgb,var(--red) 10%,var(--card));border:1px solid color-mix(in srgb,var(--red) 28%,var(--line));
+  color:var(--red);font-size:13.5px;
 }
 .banner.note{
-  background:color-mix(in srgb,var(--ink-3) 10%,var(--card));color:var(--ink-2);
+  background:var(--card);border-color:var(--line);color:var(--ink-2);
 }
 .banner.note strong{color:var(--ink)}
 .banner.warn{
-  background:color-mix(in srgb,var(--amber) 12%,var(--card));color:var(--amber);
+  background:color-mix(in srgb,var(--amber) 10%,var(--card));
+  border-color:color-mix(in srgb,var(--amber) 28%,var(--line));color:var(--amber);
 }
 .blank{padding:64px 24px;text-align:center;color:var(--ink-3)}
 .blank .h{font-size:15.5px;font-weight:650;color:var(--ink-2);margin-bottom:5px}
@@ -325,8 +317,8 @@ tbody tr.flagged td:first-child{box-shadow:inset 3px 0 0 var(--amber)}
 
 .connbar{
   display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
-  margin-top:16px;padding:14px 20px;border-radius:var(--r-md);
-  background:var(--card);box-shadow:var(--lift),var(--inner);
+  margin-top:16px;padding:12px 16px;border-radius:var(--r-md);
+  background:var(--card);border:1px solid var(--line);
 }
 .connbar .who{font-size:13px;color:var(--ink-3)}
 .connbar .who b{color:var(--ink-2);font-weight:650}
@@ -334,7 +326,7 @@ tbody tr.flagged td:first-child{box-shadow:inset 3px 0 0 var(--amber)}
 
 /* ---------- Ulanishlarni sozlash ---------- */
 .setup{max-width:760px;margin:0 auto;padding:34px 24px 60px}
-.setuplead{margin:-6px 4px 22px;font-size:13.5px;line-height:1.6;color:#6b747d;max-width:60ch}
+.setuplead{margin:-6px 4px 22px;font-size:13.5px;line-height:1.6;color:var(--ink-3);max-width:60ch}
 
 .setupcard{padding:0;margin-bottom:16px}
 .setupcard > header{padding:20px 22px 16px;border-bottom:1px solid var(--line)}
@@ -405,9 +397,8 @@ tbody tr.flagged td:first-child{box-shadow:inset 3px 0 0 var(--amber)}
   display:flex;flex-direction:column;align-items:center;gap:0;
 }
 .gatecard .mark{
-  width:46px;height:46px;border-radius:14px;display:grid;place-items:center;
-  background:linear-gradient(135deg,var(--lime),#7bd11a);color:#10160a;margin-bottom:16px;
-  box-shadow:0 0 30px -6px color-mix(in srgb,var(--lime) 70%,transparent);
+  width:42px;height:42px;border-radius:11px;display:grid;place-items:center;
+  background:var(--lime);color:#111a06;margin-bottom:16px;
 }
 .gatecard .mark svg{width:22px;height:22px}
 .gatecard h1{margin:0;font-size:20px;font-weight:700;letter-spacing:-.02em}
@@ -420,8 +411,7 @@ tbody tr.flagged td:first-child{box-shadow:inset 3px 0 0 var(--amber)}
   letter-spacing:.06em;transition:.15s;
 }
 .gateinput::placeholder{color:var(--ink-3);letter-spacing:0}
-.gateinput:focus{outline:none;border-color:var(--lime);
-  box-shadow:0 0 0 3px color-mix(in srgb,var(--lime) 16%,transparent)}
+.gateinput:focus{outline:none;border-color:var(--lime)}
 
 .gatecard .btn.wide{margin-top:12px}
 
@@ -460,22 +450,22 @@ tbody tr.flagged td:first-child{box-shadow:inset 3px 0 0 var(--amber)}
 /* ---------- Operatsiyalar qatori (dashboard) ---------- */
 .ops{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(268px,1fr));margin-bottom:20px}
 .op{
-  display:flex;align-items:center;gap:14px;text-decoration:none;color:inherit;cursor:pointer;
-  padding:15px 18px;border-radius:var(--r-md);background:var(--card);
-  box-shadow:var(--lift),var(--inner);position:relative;overflow:hidden;transition:.18s;
+  display:flex;align-items:center;gap:13px;text-decoration:none;color:inherit;cursor:pointer;
+  padding:14px 16px;border-radius:var(--r-md);background:var(--card);border:1px solid var(--line);
+  position:relative;overflow:hidden;transition:border-color .15s;
 }
-.op::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--c)}
-.op:hover{transform:translateY(-2px)}
-.op:focus-visible{outline:2px solid var(--lime);outline-offset:3px}
-.op .ic{width:38px;height:38px;border-radius:12px;flex:none;display:grid;place-items:center;
+.op::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--c)}
+.op:hover{border-color:#394046}
+.op:focus-visible{outline:2px solid var(--lime);outline-offset:2px}
+.op .ic{width:34px;height:34px;border-radius:9px;flex:none;display:grid;place-items:center;
         background:var(--card-2);color:var(--c)}
 .op .ic svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.9;
             stroke-linecap:round;stroke-linejoin:round}
 .op .txt{display:flex;flex-direction:column;min-width:0}
-.op .txt .t{font-weight:650;letter-spacing:-.01em}
+.op .txt .t{font-weight:600;letter-spacing:-.01em}
 .op .txt .n{font-size:12px;color:var(--ink-3);margin-top:2px;white-space:nowrap;
             overflow:hidden;text-overflow:ellipsis}
-.op .cnt{margin-left:auto;font-size:30px;line-height:1;color:var(--c)}
+.op .cnt{margin-left:auto;font-size:24px;line-height:1;color:var(--c)}
 
 /* ---------- Check profile form ---------- */
 .tiers{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));

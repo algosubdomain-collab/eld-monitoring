@@ -32,9 +32,15 @@ const STALE_STATE_MS = 30 * 60_000;
 const FORGET_MS = 7 * 86_400_000;
 // Bir yangilanishda ko'pi bilan nechta haydovchi haqida rasmli xabar.
 const MAX_PER_UPDATE = Number(process.env.TELEGRAM_MAX_ALERTS ?? 10);
-// Skrinshot urinishlari orasidagi kutish. Birinchisi — yangilanishning
-// API so'rovlari tinchishini kutish (aks holda platforma sahifasi 429 oladi).
-const SHOT_DELAYS_MS = [15_000, 45_000, 90_000, 180_000];
+// Birinchi skrinshotdan oldin yangilanishning API so'rovlari tinchishini
+// kutamiz (aks holda platforma sahifasi 429 oladi). Navbatga qo'yilgan
+// paytdan hisoblanadi — navbatda kutgan xabarlar qo'shimcha kutmaydi.
+const FIRST_SHOT_DELAY_MS = 15_000;
+// Bitta skrinshotga ajratilgan eng ko'p vaqt.
+const SHOT_TIMEOUT_MS = 60_000;
+// Rasm birinchi urinishda chiqmasa, xabar rasmsiz darhol ketadi, rasm esa
+// fonda shu oraliqlarda qayta olinib, xabarga javob qilib qo'shiladi.
+const PHOTO_RETRY_DELAYS_MS = [45_000, 90_000, 180_000];
 
 let state = null;
 
@@ -85,39 +91,115 @@ function caption(d, { test = false } = {}) {
 }
 
 // ---------------------------------------------------------------- navbat
-// Skrinshotlar birma-bir olinadi: bir vaqtda bir nechta brauzer sahifasi
-// API kvotasini tugatib, hammasini bo'sh qoldirardi.
 const queue = [];
 let running = false;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// Skrinshotlar birma-bir olinadi (navbatdagi va fondagi qayta urinishlar
+// ham): bir vaqtda bir nechta brauzer sahifasi API kvotasini tugatib,
+// hammasini bo'sh qoldirardi.
+let shotChain = Promise.resolve();
+
+function captureSerial(job) {
+  const run = shotChain.then(async () => {
+    const token = await job.getToken();
+    if (!token) return null;
+    let timer;
+    const timeout = new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error('screenshot timed out')), SHOT_TIMEOUT_MS);
+    });
+    try {
+      return await Promise.race([
+        captureDriver({ token, providerId: job.providerId, driver: job.driver }),
+        timeout,
+      ]);
+    } finally {
+      clearTimeout(timer);
+    }
+  });
+  shotChain = run.catch(() => {});
+  return run;
+}
+
+/** Skrinshot yoki null — xato xabar yetkazilishini to'xtatmaydi. */
+async function tryCapture(job, label) {
+  try {
+    const png = await captureSerial(job);
+    if (!png) console.warn(`[telegram] skrinshot bo'sh (${label}): ${job.driver.driverName}`);
+    return png ?? null;
+  } catch (err) {
+    console.warn(`[telegram] skrinshot xatosi (${label}): ${job.driver.driverName}: ${err.message}`);
+    return null;
+  }
+}
+
+/**
+ * Ism alohida xabarda, <code> ichida: Telegram'da bosgan zahoti nusxalanadi —
+ * platformadagi qidiruvga qo'yish uchun. Ovozsiz yuboriladi.
+ */
+async function sendCopyableNames(job, drivers) {
+  const names = drivers.map((d) => `<code>${esc(String(d.driverName ?? '').trim())}</code>`);
+  await sendMessage(job.telegram, names.join('\n').slice(0, 4000), { silent: true });
+}
 
 async function deliver(job) {
   if (job.summary) {
     const names = job.rest.map((d) => `• ${esc(d.driverName)} — ${esc(d.company)}, truck ${esc(d.truck)}`);
     await sendMessage(job.telegram,
       `<b>…and ${job.rest.length} more drivers disconnected</b>\n\n${names.join('\n')}`.slice(0, 4000));
+    await sendCopyableNames(job, job.rest);
     return;
   }
-  for (let i = 0; i < SHOT_DELAYS_MS.length; i += 1) {
-    await sleep(SHOT_DELAYS_MS[i]);
-    try {
-      const token = await job.getToken();
-      const png = token && await captureDriver({ token, providerId: job.providerId, driver: job.driver });
-      if (png) {
-        await sendPhoto(job.telegram, png, caption(job.driver, job));
-        console.log(`[telegram] rasm bilan yuborildi: ${job.driver.driverName}`);
-        return;
-      }
-      console.warn(`[telegram] skrinshot bo'sh (${i + 1}/${SHOT_DELAYS_MS.length}): ${job.driver.driverName}`);
-    } catch (err) {
-      console.warn(`[telegram] urinish ${i + 1}: ${job.driver.driverName}: ${err.message}`);
-    }
+
+  const wait = (job.queuedAt ?? 0) + FIRST_SHOT_DELAY_MS - Date.now();
+  if (wait > 0) await sleep(wait);
+
+  const png = await tryCapture(job, 1);
+  if (png) {
+    await sendPhoto(job.telegram, png, caption(job.driver, job));
+    await sendCopyableNames(job, [job.driver]);
+    console.log(`[telegram] rasm bilan yuborildi: ${job.driver.driverName}`);
+    return;
   }
 
-  // Hamma urinish muvaffaqiyatsiz — xabarni yo'qotmaymiz, rasmsiz yuboramiz.
-  await sendMessage(job.telegram, `${caption(job.driver, job)}\n\n<i>Screenshot could not be taken.</i>`);
-  console.warn(`[telegram] skrinshotsiz yuborildi: ${job.driver.driverName}`);
+  // Rasm kutib navbatni ushlab turmaymiz — xabar darhol ketadi.
+  const msg = await sendMessage(job.telegram, caption(job.driver, job));
+  await sendCopyableNames(job, [job.driver]);
+  console.warn(`[telegram] rasmsiz yuborildi, rasm fonda qayta olinadi: ${job.driver.driverName}`);
+  retryPhoto(job, msg?.message_id).catch((err) => console.warn(`[telegram] ${err.message}`));
+}
+
+/** Fonda: rasmni qayta olib, yuborilgan xabarga javob qilib qo'shadi. */
+async function retryPhoto(job, replyTo) {
+  for (let i = 0; i < PHOTO_RETRY_DELAYS_MS.length; i += 1) {
+    await sleep(PHOTO_RETRY_DELAYS_MS[i]);
+    const png = await tryCapture(job, `qayta ${i + 1}/${PHOTO_RETRY_DELAYS_MS.length}`);
+    if (!png) continue;
+    await sendPhoto(job.telegram, png,
+      `📸 <b>${esc(properName(job.driver.driverName))}</b> · Truck ${esc(job.driver.truck)}`,
+      { replyTo, silent: true });
+    console.log(`[telegram] rasm keyinroq qo'shildi: ${job.driver.driverName}`);
+    return;
+  }
+  console.warn(`[telegram] rasm olinmadi, xabar rasmsiz qoldi: ${job.driver.driverName}`);
+}
+
+/**
+ * Telegram vaqtincha ishlamadi — haydovchilarni "xabar berilmagan" holatiga
+ * qaytaramiz. Keyingi yangilanishda (hali uzilgan bo'lsa) qayta navbatga tushadi.
+ */
+async function markUndelivered(job) {
+  const records = (await load())[job.key]?.drivers;
+  if (!records) return;
+  for (const d of job.summary ? job.rest : [job.driver]) {
+    const rec = records[d.driverId];
+    if (rec && !rec.connected) {
+      rec.alerted = false;
+      rec.notifiedAt = null;
+    }
+  }
+  await persist();
 }
 
 /** Bitta haydovchi haqida xabarni darhol yetkazadi (qo'lda qayta yuborish uchun). */
@@ -129,7 +211,17 @@ async function drain() {
   try {
     while (queue.length) {
       const job = queue.shift();
-      await deliver(job).catch((err) => console.warn(`[telegram] ${err.message}`));
+      try {
+        await deliver(job);
+      } catch (err) {
+        const who = job.summary ? `${job.rest.length} ta haydovchi ro'yxati` : job.driver.driverName;
+        if (err.transient) {
+          console.warn(`[telegram] yetkazilmadi, keyingi tekshiruvda qayta urinadi: ${who}: ${err.message}`);
+          await markUndelivered(job).catch((e) => console.warn(`[telegram] ${e.message}`));
+        } else {
+          console.warn(`[telegram] yetkazilmadi: ${who}: ${err.message}`);
+        }
+      }
     }
   } finally {
     running = false;
@@ -206,16 +298,15 @@ export async function onFleetUpdate({ login, providerId, drivers, telegram, getT
 
   all[key] = { basis: 'eld', savedAt: new Date(now).toISOString(), drivers: next };
   await persist();
-
   if (!due.length || !telegram?.botToken || !telegram?.chatId) return;
 
   // Har bir haydovchi — alohida xabar, o'z skrinshoti bilan.
   for (const d of due.slice(0, MAX_PER_UPDATE)) {
-    queue.push({ login, providerId, driver: d, telegram, getToken });
+    queue.push({ key, login, providerId, driver: d, telegram, getToken, queuedAt: now });
   }
   if (due.length > MAX_PER_UPDATE) {
     queue.push({
-      login, providerId, telegram, getToken, summary: true,
+      key, login, providerId, telegram, getToken, summary: true, queuedAt: now,
       driver: null, rest: due.slice(MAX_PER_UPDATE),
     });
   }

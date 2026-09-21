@@ -46,6 +46,73 @@ async function getProfile(token, tenantId) {
  */
 export async function captureDriver({ token, providerId, driver }) {
   const provider = getProvider(providerId);
+  return provider.source === 'fiveeld'
+    ? captureFive({ token, provider, driver })
+    : captureDriveHos({ token, provider, driver });
+}
+
+/**
+ * Sahifa qaysi kunni ochadi. Doim bugungi kun (server vaqti bo'yicha):
+ * haydovchining oxirgi signali kechagi bo'lsa, o'sha kun grafigi bo'sh
+ * ochilib, kartochkada hech narsa ko'rinmay qolardi.
+ */
+function today() {
+  const at = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  return {
+    iso: `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}`,
+    dmy: `${pad(at.getDate())}-${pad(at.getMonth() + 1)}-${at.getFullYear()}`,
+  };
+}
+
+/**
+ * Five ELD: token localStorage'da "token" kalitida turadi, sahifa manzili esa
+ * hash-marshrut: #/company/<kompaniya uid>/logs-edit?id=<haydovchi uid>.
+ * driver.companyId — o'sha kompaniya uid'i (src/sources/fiveeld.js).
+ */
+async function captureFive({ token, provider, driver }) {
+  if (!driver.companyId) return null;
+  const browser = await getBrowser();
+
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
+  try {
+    await ctx.addInitScript(([site, t]) => {
+      if (location.hostname === site) {
+        localStorage.setItem('token', t);
+        localStorage.setItem('tokenDate', new Date().toISOString());
+      }
+    }, [provider.site, token]);
+
+    const page = await ctx.newPage();
+    // XAVFSIZLIK: sahifa hech narsani o'zgartira olmaydi — GET'dan boshqasi bloklanadi.
+    await page.route('https://*.fiveeld.com/**', (route) =>
+      route.request().method() === 'GET' ? route.continue() : route.abort()
+    );
+
+    const url = `https://${provider.site}/#/company/${driver.companyId}/logs-edit?`
+      + new URLSearchParams({ id: driver.driverId, date: today().dmy, page: 'logs' });
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 });
+
+    const firstWord = String(driver.driverName ?? '').trim().split(/\s+/)[0].toLowerCase();
+    const loaded = await page.waitForFunction(
+      (name) => document.body.innerText.toLowerCase().includes(name),
+      firstWord, { timeout: 25000 }
+    ).then(() => true).catch(() => false);
+    if (!loaded || page.url().includes('/login')) return null;
+
+    // "Driver Inactiveness Warning" kabi oyna kartochkani to'sib qo'yadi.
+    await page.getByRole('button', { name: /^(ok|close)$/i }).first()
+      .click({ timeout: 3000 }).catch(() => {});
+    await page.waitForTimeout(1500);
+
+    // Chap menyu (270px) kesiladi: ism, holat va Break/Drive/Shift/Cycle qoladi.
+    return await page.screenshot({ clip: { x: 270, y: 0, width: 1170, height: 560 } });
+  } finally {
+    await ctx.close();
+  }
+}
+
+async function captureDriveHos({ token, provider, driver }) {
   const profile = await getProfile(token, provider.tenantId);
   const browser = await getBrowser();
 
@@ -67,7 +134,7 @@ export async function captureDriver({ token, providerId, driver }) {
       driverId: driver.driverId,
       tab: 'grid',
       // Router qiymatlarni JSON sifatida o'qiydi — sana satr bo'lib qolsin.
-      activeDate: JSON.stringify((driver.lastUpdate ?? new Date().toISOString()).slice(0, 10)),
+      activeDate: JSON.stringify(today().iso),
     });
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 });
 

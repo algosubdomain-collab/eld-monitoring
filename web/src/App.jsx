@@ -9,6 +9,7 @@ import UpdateRun from './pages/UpdateRun.jsx';
 import Login from './pages/Login.jsx';
 import Connect from './pages/Connect.jsx';
 import Owner from './pages/Owner.jsx';
+import { ProviderContext } from './lib/provider.jsx';
 
 const PROVIDER_KEY = 'eld.provider';
 
@@ -156,14 +157,17 @@ function Workspace({ user, signOut: doSignOut, onSignedOut }) {
   );
 
   return (
-    <Routes>
-      <Route path="/" element={home} />
-      <Route path="/c/:slug" element={<Category data={data} />} />
-      <Route path="/ops/profile" element={<Tiered data={data} kind="profile" />} />
-      <Route path="/ops/need-cycle" element={<Tiered data={data} kind="need-cycle" />} />
-      <Route path="/ops/:slug" element={<UpdateRun data={data} updates={updates} />} />
-      <Route path="*" element={home} />
-    </Routes>
+    // Jadvaldagi ism havolasi qaysi platformaga olib borishini shu belgilaydi.
+    <ProviderContext.Provider value={connected.find((p) => p.id === active) ?? null}>
+      <Routes>
+        <Route path="/" element={home} />
+        <Route path="/c/:slug" element={<Category data={data} />} />
+        <Route path="/ops/profile" element={<Tiered data={data} kind="profile" />} />
+        <Route path="/ops/need-cycle" element={<Tiered data={data} kind="need-cycle" />} />
+        <Route path="/ops/:slug" element={<UpdateRun data={data} updates={updates} />} />
+        <Route path="*" element={home} />
+      </Routes>
+    </ProviderContext.Provider>
   );
 }
 
