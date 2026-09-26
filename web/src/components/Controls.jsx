@@ -4,7 +4,7 @@ import { STATUS } from '../lib/format.js';
 
 export default function Controls({
   query, onQuery, status, onStatus, counts,
-  columns, onToggleColumn, auto, onAuto, onExport, focus, onFocus,
+  columns, onToggleColumn, auto, onAuto, onExport, focus, onFocus, company,
 }) {
   const [open, setOpen] = useState(false);
   const menu = useRef(null);
@@ -27,6 +27,8 @@ export default function Controls({
           onChange={(e) => onQuery(e.target.value)}
         />
       </div>
+
+      {company}
 
       <div className="segs">
         {tabs.map(([key, label]) => (

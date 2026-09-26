@@ -1,5 +1,6 @@
 import { STATUS, LIMITS, hhmm, ago, initials, avatarPaint, urgency } from '../lib/format.js';
 import DriverName from './DriverName.jsx';
+import { CompanyNote } from '../lib/requirements.jsx';
 
 export const Driver = ({ d }) => (
   <div className="who">
@@ -7,6 +8,7 @@ export const Driver = ({ d }) => (
     <span>
       <DriverName name={d.driverName} driver={d} />
       <div className="id mono">{d.driverId || '—'}</div>
+      <CompanyNote companyId={d.companyId} />
     </span>
   </div>
 );

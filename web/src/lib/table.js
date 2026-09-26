@@ -9,12 +9,17 @@ export function filterRows(drivers, { query = '', status = 'all', match = null }
       .some((v) => String(v).toLowerCase().includes(q)));
 }
 
+const cmp = (x, y) => {
+  if (x == null) return 1;
+  if (y == null) return -1;
+  return typeof x === 'number' ? x - y : String(x).localeCompare(String(y));
+};
+
 export function sortRows(rows, { key, dir }) {
   return [...rows].sort((a, b) => {
-    const [x, y] = [a[key], b[key]];
-    if (x == null) return 1;
-    if (y == null) return -1;
-    return (typeof x === 'number' ? x - y : String(x).localeCompare(String(y))) * dir;
+    const primary = cmp(a[key], b[key]) * dir;
+    // Teng bo'lsa ism bo'yicha — bir kompaniya haydovchilari tartibda tursin.
+    return primary || cmp(a.driverName, b.driverName);
   });
 }
 

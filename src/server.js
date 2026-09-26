@@ -23,6 +23,9 @@ import {
   noteProviderError, markProviderExpired, updateProviderTokens, allConnections,
   deleteConnections,
 } from './connections.js';
+import { getRequirements, setRequirement, deleteRequirements } from './requirements.js';
+import { getBoard, patchRow, deleteBoard } from './board.js';
+import { getConfig, setConfig, deleteConfig } from './board-config.js';
 
 const PUBLIC_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'public');
 const MIME = {
@@ -359,6 +362,9 @@ const server = http.createServer(async (req, res) => {
       if (req.method === 'DELETE') {
         await deleteUser(target);
         await deleteConnections(target);
+        await deleteRequirements(target);
+        await deleteBoard(target);
+        await deleteConfig(target);
         caches.forEach((_, key) => key.startsWith(`${target}:`) && caches.delete(key));
         return json(res, 200, { users: await usersWithStatus() });
       }
@@ -432,6 +438,55 @@ const server = http.createServer(async (req, res) => {
         const body = await readJson(req);
         return json(res, 200, await markSent(body.section, body.driverIds));
       }
+      return json(res, 405, { error: 'Method not allowed' });
+    }
+
+    // Kompaniya eslatmalari (requirement): { [companyId]: note }.
+    if (p === '/api/requirements') {
+      if (req.method === 'GET') return json(res, 200, await getRequirements(login));
+      if (req.method === 'PUT') {
+        const { companyId, note } = await readJson(req);
+        return json(res, 200, await setRequirement(login, companyId, note));
+      }
+      return json(res, 405, { error: 'Method not allowed' });
+    }
+
+    // Update board — har bir haydovchi qatori uchun qo'lda kiritilgan qiymatlar.
+    if (p === '/api/board') {
+      if (req.method === 'GET') return json(res, 200, { rows: await getBoard(login) });
+      if (req.method === 'PUT') {
+        const { driverId, patch } = await readJson(req);
+        return json(res, 200, { driverId, row: await patchRow(login, driverId, patch) });
+      }
+      return json(res, 405, { error: 'Method not allowed' });
+    }
+
+    // Haydovchi loglarini tasdiqlash (certify) — haqiqiy compliance amali.
+    if (p === '/api/certify' && req.method === 'POST') {
+      const { provider, driverId, companyId } = await readJson(req);
+      const id = getProvider(provider).id;
+      const source = sources.for(id);
+      if (!source.certifyDriver) return json(res, 400, { error: 'Certify is not supported for this platform yet' });
+
+      const entry = (await getConnections(login)).providers?.[id];
+      if (!entry?.token || entry.expiredAt) return json(res, 409, { error: 'This platform is not connected' });
+
+      try {
+        await source.certifyDriver({
+          token: entry.token, refreshToken: entry.refreshToken ?? null, provider: id,
+          onTokens: (t) => updateProviderTokens(login, id, t),
+          driverId, companyId,
+        });
+        return json(res, 200, { ok: true });
+      } catch (err) {
+        return json(res, 502, { error: err.message });
+      }
+    }
+
+    // Board sozlamalari — Status va Update variantlari (foydalanuvchi moslaydi).
+    if (p === '/api/board-config') {
+      if (req.method === 'GET') return json(res, 200, await getConfig(login));
+      if (req.method === 'PUT') return json(res, 200, await setConfig(login, await readJson(req)));
       return json(res, 405, { error: 'Method not allowed' });
     }
 

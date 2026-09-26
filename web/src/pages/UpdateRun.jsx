@@ -3,9 +3,11 @@ import { Link, Navigate, useParams } from 'react-router-dom';
 import { COLUMNS } from '../components/cells.jsx';
 import FleetTable from '../components/FleetTable.jsx';
 import ScanPanel from '../components/ScanPanel.jsx';
+import CompanyFilter from '../components/CompanyFilter.jsx';
 import { Back, Send } from '../components/Icons.jsx';
 import { RUNS, countdown } from '../lib/ops.js';
 import { sortRows } from '../lib/table.js';
+import { useCompany, byCompany } from '../lib/company.jsx';
 
 /**
  * Davriy update bo'limi (Disconnect / Driving time).
@@ -19,7 +21,7 @@ import { sortRows } from '../lib/table.js';
 export default function UpdateRun({ data, updates }) {
   const { slug } = useParams();
   const run = RUNS[slug];
-  const [sort, setSort] = useState({ key: 'driverName', dir: 1 });
+  const [sort, setSort] = useState({ key: 'company', dir: 1 });
   // Yuborish bitta bosish bilan ketmasin: bu amal haydovchilarni 10 soatga
   // bloklaydi, shuning uchun tugma avval tasdiq holatiga o'tadi.
   const [armed, setArmed] = useState(false);
@@ -52,6 +54,10 @@ export default function UpdateRun({ data, updates }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, run, entry, Math.floor(now / 1000)]);
 
+  // Tanlangan kompaniya bo'yicha: ko'rinadigan ham, yuboriladigan ham shu doira.
+  const { value: company } = useCompany();
+  const shown = useMemo(() => byCompany(ready, company), [ready, company]);
+
   if (!run) return <Navigate to="/" replace />;
 
   const columns = COLUMNS
@@ -78,7 +84,7 @@ export default function UpdateRun({ data, updates }) {
               <div className="eyebrow">{run.title}</div>
               <div className="title">
                 <span className={`dotmatrix count ${run.tone ?? ''}`}>
-                  {String(ready.length).padStart(2, '0')}
+                  {String(shown.length).padStart(2, '0')}
                 </span>
                 <span className="unit">DRIVERS</span>
               </div>
@@ -88,31 +94,35 @@ export default function UpdateRun({ data, updates }) {
             <div className="panel runbox">
               <div className="big">Batch ready</div>
               <div className="lbl">
-                {ready.length
-                  ? `${ready.length} driver${ready.length > 1 ? 's' : ''} waiting for an update`
+                {shown.length
+                  ? `${shown.length} driver${shown.length > 1 ? 's' : ''} waiting for an update`
                   : 'Nobody needs an update right now'}
               </div>
               <button
                 className={`btn wide ${armed ? 'confirm' : 'lime'}`}
-                disabled={!ready.length || sending}
+                disabled={!shown.length || sending}
                 onClick={() => {
                   if (!armed) return setArmed(true);
                   setArmed(false);
-                  send(slug, ready.map((d) => d.driverId));
+                  send(slug, shown.map((d) => d.driverId));
                 }}
               >
                 <Send />
                 {sending
                   ? 'Sending…'
                   : armed
-                    ? `Confirm — send to ${ready.length}`
+                    ? `Confirm — send to ${shown.length}`
                     : 'Update sent to all of them'}
               </button>
             </div>
           </div>
 
+          <div className="controls">
+            <CompanyFilter drivers={ready} />
+          </div>
+
           <FleetTable
-            rows={sortRows(ready, sort)} total={ready.length} columns={columns}
+            rows={sortRows(shown, sort)} total={shown.length} columns={columns}
             sort={sort} onSort={(key) => setSort((s) => ({ key, dir: s.key === key ? -s.dir : 1 }))}
             sourceName={data.source.name}
           />

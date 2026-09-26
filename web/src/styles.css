@@ -22,6 +22,7 @@
   --violet:#9b8cf0;
   --slate:#8894a1;
   --red:#e0646d;
+  --sky:#5aa9e6;
 
   --r-lg:14px;
   --r-md:12px;
@@ -700,3 +701,173 @@ a.nm.link:hover{color:var(--lime);text-decoration:underline;text-underline-offse
   .tablewrap{max-height:calc(100vh - 300px)}
   .page.focused .tablewrap{max-height:calc(100vh - 130px)}
 }
+
+/* ---------- Kompaniya eslatmasi (requirement) ---------- */
+/* Haydovchi ostidagi kichik yozuv — kompaniyasiga yozilgan eslatma. */
+.req{display:block;margin-top:3px;font-size:11px;line-height:1.35;color:var(--amber);
+     max-width:280px;white-space:normal}
+
+/* Eslatmalarni tahrirlash sahifasi */
+.reqrow{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.reqrow:last-child{border-bottom:none}
+.reqmeta{display:flex;flex-direction:column;min-width:0;flex:0 0 210px}
+.reqrow .gateinput{flex:1;min-width:200px;width:auto}
+
+/* ---------- Kompaniya filtri (ochiladigan ro'yxat) ---------- */
+.csel{display:inline-flex;min-width:0}
+.csel select{
+  font:inherit;font-size:13px;font-weight:500;color:var(--ink-2);
+  background:var(--card);border:1px solid var(--line);border-radius:var(--r-sm);
+  padding:9px 30px 9px 12px;cursor:pointer;max-width:260px;
+  appearance:none;-webkit-appearance:none;color-scheme:dark;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b737b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 11px center;
+  text-overflow:ellipsis;transition:border-color .15s;
+}
+.csel select:hover{color:var(--ink);border-color:#394046}
+.csel select:focus{outline:none;border-color:var(--lime)}
+
+
+/* ================= Update Dashboard (board) ================= */
+.page.narrow{padding:16px 12px 40px;max-width:none}
+
+.board{overflow-x:auto;overflow-y:visible;padding:0;border:none;background:none;box-shadow:none}
+/* Ustunlar: idx, driver(+cycle), unit, eld, driving-left, status, update */
+.brow{display:grid;
+  grid-template-columns:32px minmax(210px,1.2fr) 92px 134px 168px minmax(150px,1fr) 100px 132px;
+  align-items:center;min-width:1120px;border-bottom:1px solid var(--line)}
+.brow:last-child{border-bottom:none}
+.bhead{position:sticky;top:0;z-index:5;background:var(--canvas);
+  font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.bhead .bc{padding:9px 8px;white-space:nowrap}
+.bc{padding:7px 8px;min-width:0;font-size:13px}
+.bc.bidx{color:var(--ink-3);font-variant-numeric:tabular-nums;font-size:11.5px}
+.bc.bname{display:flex;align-items:center;gap:12px}
+.bc.bunit{color:var(--ink-2)}
+.brow:not(.bhead):hover{background:var(--card-2)}
+.bc .nil{color:var(--ink-3)}
+.drivetime{font-size:13.5px;font-weight:600;letter-spacing:-.01em}
+
+/* Ism + suggestion ustun-ichi */
+.ninfo{display:flex;flex-direction:column;gap:3px;min-width:0}
+/* Cycle bo'yicha kichik maslahat — notification kabi */
+.sugg{display:inline-flex;align-items:center;gap:5px;align-self:flex-start;
+  font-size:10.5px;font-weight:600;letter-spacing:.02em;padding:2px 8px;border-radius:999px;
+  color:var(--c);background:color-mix(in srgb,var(--c) 15%,transparent)}
+.sugg i{width:5px;height:5px;border-radius:50%;background:var(--c);flex:none;
+  box-shadow:0 0 6px var(--c)}
+
+/* Cycle qoldig'i — glowli aylana progress (Spline uslubi) */
+.cring{position:relative;width:44px;height:44px;flex:none;display:grid;place-items:center}
+.cring svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
+.cring .crtrack{fill:none;stroke:var(--card-3);stroke-width:3.5}
+.cring .crprog{fill:none;stroke:var(--c);stroke-width:3.5;stroke-linecap:round;
+  filter:drop-shadow(0 0 4px color-mix(in srgb,var(--c) 70%,transparent));
+  transition:stroke-dashoffset .5s cubic-bezier(.4,0,.2,1)}
+.cring b{font-size:13px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;z-index:1}
+
+/* Kompaniya guruhi */
+.bgroup{border-bottom:1px solid var(--line)}
+.bgroup:last-child{border-bottom:none}
+.bgrouphead{display:flex;align-items:center;gap:9px;width:100%;min-width:1120px;
+  padding:9px 10px;background:var(--card);border:none;cursor:pointer;
+  color:var(--ink);font:inherit;font-weight:600;font-size:12.5px;text-align:left;position:sticky;left:0}
+.bgrouphead:hover{background:var(--card-2)}
+.bgrouphead .caret{color:var(--ink-3);transition:transform .15s;display:inline-block;font-size:11px}
+.bgrouphead .caret.open{transform:rotate(90deg)}
+.bgrouphead .cocount{font-size:11px;color:var(--ink-3)}
+
+/* ---------- Notion uslubidagi dropdown ---------- */
+.ddbtn{display:inline-flex;align-items:center;gap:7px;max-width:100%;white-space:nowrap;border:1px solid transparent;
+  cursor:pointer;font:inherit;font-size:12.5px;font-weight:500;padding:4px 8px 4px 10px;border-radius:999px;
+  background:color-mix(in srgb,var(--c) 15%,transparent);color:var(--c);transition:.12s}
+.ddbtn i{width:6px;height:6px;border-radius:50%;background:var(--c);flex:none;
+  box-shadow:0 0 6px color-mix(in srgb,var(--c) 80%,transparent)}
+.ddbtn:not(.empty){box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--c) 22%,transparent)}
+.ddbtn .ddcaret{width:12px;height:12px;margin-left:auto;opacity:.6;flex:none}
+.ddbtn.empty{background:none;color:var(--ink-3);border-color:var(--line)}
+.ddbtn.empty:hover{background:var(--card-3);color:var(--ink-2)}
+.ddbtn.active{box-shadow:0 0 0 2px color-mix(in srgb,var(--lime) 35%,transparent)}
+
+.ddmenu{position:fixed;z-index:80;padding:6px;border-radius:12px;
+  background:var(--card-2);border:1px solid var(--line);
+  box-shadow:0 12px 30px -10px rgba(0,0,0,.6);
+  display:flex;flex-direction:column;gap:2px;max-height:320px;overflow-y:auto;
+  transform-origin:top left;animation:ddin .13s cubic-bezier(.2,.7,.3,1)}
+@keyframes ddin{from{opacity:0;transform:translateY(-4px) scale(.97)}to{opacity:1;transform:none}}
+.ddopt{display:flex;align-items:center;gap:9px;width:100%;border:none;cursor:pointer;
+  background:none;font:inherit;font-size:13px;color:var(--ink-2);text-align:left;
+  padding:8px 10px;border-radius:8px;transition:background .1s}
+.ddopt i{width:8px;height:8px;border-radius:50%;background:var(--c);flex:none}
+.ddopt .ddlabel{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ddopt .ddtick{width:14px;height:14px;color:var(--ink-2);flex:none}
+.ddopt:hover{background:var(--card-3);color:var(--ink)}
+.ddopt.sel{color:var(--ink)}
+.ddopt.ddclear{color:var(--ink-3);border-top:1px solid var(--line);border-radius:0;margin-top:2px;padding-top:9px}
+.ddopt.ddclear:hover{color:var(--red)}
+
+/* ---------- Modal (settings) ---------- */
+.modal{position:fixed;inset:0;z-index:70;display:grid;place-items:center;padding:20px;
+  background:rgba(0,0,0,.55);overflow:auto;animation:ddin .12s ease}
+.modalcard{width:min(560px,100%);max-height:calc(100vh - 40px);display:flex;flex-direction:column}
+.modalhead{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:16px 18px;border-bottom:1px solid var(--line)}
+.modalhead h2{margin:0;font-size:16px;font-weight:600}
+.modalhead .iconbtn{width:30px;height:30px;font-size:14px}
+.modalbody{padding:16px 18px;overflow-y:auto;display:flex;flex-direction:column;gap:22px}
+.modalfoot{display:flex;justify-content:flex-end;gap:10px;padding:14px 18px;border-top:1px solid var(--line)}
+.fl{font-size:12.5px;font-weight:600;color:var(--ink-2)}
+.fl .gateinput{width:100%}
+
+/* Settings variant ro'yxati */
+.optset{display:flex;flex-direction:column;gap:10px}
+.optlist{display:flex;flex-direction:column;gap:6px}
+.optrow{display:flex;align-items:center;gap:8px}
+.optrow .gateinput{flex:1;letter-spacing:normal}
+.swatch{width:22px;height:22px;border-radius:6px;border:none;cursor:pointer;flex:none}
+.iconbtn.sm{width:26px;height:26px;font-size:12px}
+.optadd{display:flex;gap:8px}
+.optadd .gateinput{flex:1;letter-spacing:normal}
+
+/* Certify — yashil nuqta + tugma */
+.certcell{display:flex;align-items:center;gap:8px}
+.certdot{width:8px;height:8px;border-radius:50%;background:var(--card-3);flex:none;transition:.2s}
+.certdot.on{background:var(--lime);box-shadow:0 0 8px var(--lime)}
+.certbtn{white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+.certbtn.confirm{background:var(--amber);border-color:var(--amber);color:#1a1206}
+.certbtn.doing{color:var(--ink-2)}
+.certbtn.done{color:var(--lime);border-color:color-mix(in srgb,var(--lime) 35%,transparent)}
+.certbtn.err{background:color-mix(in srgb,var(--red) 16%,transparent);border-color:transparent;color:var(--red)}
+.certspin{width:11px;height:11px;border-radius:50%;flex:none;
+  border:2px solid color-mix(in srgb,var(--ink-2) 40%,transparent);border-top-color:var(--ink);
+  animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Unit — truck active/deactive nuqtasi */
+.bc.bunit{display:flex;align-items:center;gap:7px;color:var(--ink-2)}
+.unitdot{width:7px;height:7px;border-radius:50%;flex:none}
+.unitdot.on{background:var(--lime);box-shadow:0 0 6px var(--lime)}
+.unitdot.off{background:var(--ink-3)}
+
+/* Ism ostidagi chip'lar: suggestion + profile changed */
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.sugg .suggx{margin-left:3px;opacity:.55;font-size:9px}
+.sugg:hover .suggx{opacity:1}
+.sugg{border:none;cursor:pointer}
+.pchg{display:inline-flex;align-items:center;font-size:10.5px;font-weight:600;letter-spacing:.02em;
+  padding:2px 8px;border-radius:999px;color:var(--sky);
+  background:color-mix(in srgb,var(--sky) 15%,transparent)}
+
+/* Responsible inline input */
+.textcell{font:inherit;font-size:13px;color:var(--ink);background:none;border:1px solid transparent;
+  border-radius:7px;padding:5px 8px;width:100%;transition:.12s}
+.textcell::placeholder{color:var(--ink-3)}
+.textcell:hover{border-color:var(--line)}
+.textcell:focus{outline:none;border-color:var(--lime);background:var(--card-2)}
+
+/* Drive left — soat ko'rinishi (time style) */
+.timeleft{display:inline-flex;align-items:center;gap:6px;color:var(--c);
+  font-variant-numeric:tabular-nums}
+.timeleft svg{width:15px;height:15px;flex:none;opacity:.9}
+.timeleft b{font-size:15px;font-weight:700;letter-spacing:-.01em;
+  font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace}

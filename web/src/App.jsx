@@ -9,7 +9,13 @@ import UpdateRun from './pages/UpdateRun.jsx';
 import Login from './pages/Login.jsx';
 import Connect from './pages/Connect.jsx';
 import Owner from './pages/Owner.jsx';
+import Requirements from './pages/Requirements.jsx';
+import UpdateDashboard from './pages/UpdateDashboard.jsx';
 import { ProviderContext } from './lib/provider.jsx';
+import { RequirementsContext } from './lib/requirements.jsx';
+import { CompanyContext } from './lib/company.jsx';
+
+const COMPANY_KEY = 'eld.company';
 
 const PROVIDER_KEY = 'eld.provider';
 
@@ -69,7 +75,28 @@ function Workspace({ user, signOut: doSignOut, onSignedOut }) {
 
   useEffect(() => { loadConns(); }, [loadConns]);
 
+  // Kompaniya eslatmalari (requirement): { [companyId]: note }.
+  const [reqs, setReqs] = useState({});
+  const loadReqs = useCallback(async () => {
+    const res = await fetch('/api/requirements');
+    if (res.ok) setReqs(await res.json());
+  }, []);
+  useEffect(() => { loadReqs(); }, [loadReqs]);
+
+  const saveReq = useCallback(async (companyId, note) => {
+    const res = await fetch('/api/requirements', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ companyId, note }),
+    });
+    if (res.ok) setReqs(await res.json());
+  }, []);
+
   useEffect(() => { if (provider) localStorage.setItem(PROVIDER_KEY, provider); }, [provider]);
+
+  // Barcha sahifalar uchun umumiy kompaniya filtri.
+  const [company, setCompany] = useState(() => localStorage.getItem(COMPANY_KEY) ?? '');
+  useEffect(() => { localStorage.setItem(COMPANY_KEY, company); }, [company]);
 
   const connected = useMemo(
     () => conns?.providers?.filter((p) => p.connected) ?? [],
@@ -159,14 +186,20 @@ function Workspace({ user, signOut: doSignOut, onSignedOut }) {
   return (
     // Jadvaldagi ism havolasi qaysi platformaga olib borishini shu belgilaydi.
     <ProviderContext.Provider value={connected.find((p) => p.id === active) ?? null}>
-      <Routes>
-        <Route path="/" element={home} />
-        <Route path="/c/:slug" element={<Category data={data} />} />
-        <Route path="/ops/profile" element={<Tiered data={data} kind="profile" />} />
-        <Route path="/ops/need-cycle" element={<Tiered data={data} kind="need-cycle" />} />
-        <Route path="/ops/:slug" element={<UpdateRun data={data} updates={updates} />} />
-        <Route path="*" element={home} />
-      </Routes>
+      <RequirementsContext.Provider value={{ map: reqs, save: saveReq }}>
+       <CompanyContext.Provider value={{ value: company, set: setCompany }}>
+        <Routes>
+          <Route path="/" element={home} />
+          <Route path="/c/:slug" element={<Category data={data} />} />
+          <Route path="/ops/profile" element={<Tiered data={data} kind="profile" />} />
+          <Route path="/ops/need-cycle" element={<Tiered data={data} kind="need-cycle" />} />
+          <Route path="/ops/:slug" element={<UpdateRun data={data} updates={updates} />} />
+          <Route path="/requirements" element={<Requirements data={data} />} />
+          <Route path="/updates" element={<UpdateDashboard data={data} />} />
+          <Route path="*" element={home} />
+        </Routes>
+       </CompanyContext.Provider>
+      </RequirementsContext.Provider>
     </ProviderContext.Provider>
   );
 }

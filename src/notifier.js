@@ -76,15 +76,16 @@ function duration(iso) {
   return `${h} hour${h === 1 ? '' : 's'}${m ? ` ${m} minute${m === 1 ? '' : 's'}` : ''}`;
 }
 
-/** Xabar haydovchiga murojaat qiladi. Vaqt yuborish paytida hisoblanadi. */
+/** Xabar guruhga (jamoaga) murojaat qiladi. Vaqt yuborish paytida hisoblanadi. */
 function caption(d, { test = false } = {}) {
   const driving = d.status === 'driving' ? ' while driving' : '';
   return [
     ...(test ? ['🧪 <i>Test message</i>', ''] : []),
-    `👋 Hello brother <b>${esc(properName(d.driverName))}</b>,`,
+    '👋 Hello team,',
     '',
-    `Your ELD has been disconnected for <b>${esc(duration(d.disconnectedAt))}</b>${driving}. ` +
-      'Please check your device and make sure it is connected.',
+    `<b>${esc(properName(d.driverName))}</b> — ELD has been disconnected for ` +
+      `<b>${esc(duration(d.disconnectedAt))}</b>${driving}. ` +
+      'Please check the device and make sure it is connected.',
     '',
     `🚛 Truck ${esc(d.truck)} · ${esc(d.company)}`,
   ].join('\n');

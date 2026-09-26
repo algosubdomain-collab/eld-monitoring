@@ -19,6 +19,8 @@ export async function loadSource(name = config.source) {
       fetchDrivers: mod.fetchDrivers,
       // Ixtiyoriy: dam oluvchilarni aniqlash uchun (src/resting.js).
       fetchLatestStatuses: mod.fetchLatestStatuses ?? null,
+      // Ixtiyoriy: haydovchi loglarini tasdiqlash (certify).
+      certifyDriver: mod.certifyDriver ?? null,
     };
   } catch (err) {
     if (err?.code === 'ERR_MODULE_NOT_FOUND') {

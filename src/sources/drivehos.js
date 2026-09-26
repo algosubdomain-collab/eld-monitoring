@@ -205,6 +205,25 @@ async function getProfiles(ctx) {
   return new Map(rows.map((r) => [r.driver_id, r]));
 }
 
+// Mashina holati (active/inactive) — kam o'zgaradi, akkaunt bo'yicha keshlanadi.
+const vehicleCaches = new Map();
+
+/** Map<vehicle_id, active(boolean)> — truck faol yoki o'chirilganini bildiradi. */
+async function getVehicles(ctx) {
+  const key = `${ctx.providerId}:${accountId(ctx.token)}`;
+  const cached = vehicleCaches.get(key);
+  if (cached && Date.now() - cached.at < COMPANY_TTL_MS) return cached.map;
+
+  const rows = await fetchAllPages(
+    (p) => `/v1/vehicles?page=${p}&limit=100&status=all`,
+    ctx, null,
+    (d) => d.vehicles
+  );
+  const map = new Map(rows.map((r) => [r.vehicle_id, r.status === true]));
+  vehicleCaches.set(key, { at: Date.now(), map });
+  return map;
+}
+
 // Kesh provayder VA platforma akkaunti bo'yicha ajratiladi: bir serverda
 // bir nechta foydalanuvchi bo'lsa, har birining akkaunti boshqa kompaniyalarni
 // ko'radi. Faqat provayder bo'yicha bo'lsa, biri ikkinchisining ro'yxatini
@@ -315,11 +334,16 @@ export async function fetchDrivers({
     return { provider: { id: chosen.id, name: chosen.name }, drivers: [], companies: list.length };
   }
 
-  const [companies, profiles] = await Promise.all([
+  const [companies, profiles, vehicles] = await Promise.all([
     getCompanies(ctx),
     getProfiles(ctx).catch((err) => {
       if (err instanceof TokenError) throw err;
       console.warn(`[leadereld] profillar olinmadi: ${err.message}`);
+      return new Map();
+    }),
+    getVehicles(ctx).catch((err) => {
+      if (err instanceof TokenError) throw err;
+      console.warn(`[leadereld] mashinalar olinmadi: ${err.message}`);
       return new Map();
     }),
   ]);
@@ -360,6 +384,11 @@ export async function fetchDrivers({
       company: company.name,
       companyId: company.id,
       truck: row.vehicle_number || '—',
+      // Mashina UUID'i — haydovchi log havolasi uchun kerak (src/screenshot.js,
+      // web platform.js). vehicle_number emas, aynan vehicle_id.
+      vehicleId: row.vehicle_id || null,
+      // Truck faolmi (active) yoki o'chirilganmi (deactivated). Noma'lum → null.
+      truckActive: row.vehicle_id ? (vehicles.get(row.vehicle_id) ?? null) : null,
       status: STATUS_MAP[row.current_status] ?? 'unknown',
       statusCode: row.current_status ?? null,
       // API qolgan vaqtni millisekundda beradi.
@@ -391,4 +420,55 @@ export async function fetchDrivers({
       ? { count: restricted.length, totalCompanies: active.length, names: restricted.slice(0, 5) }
       : null,
   };
+}
+
+/**
+ * Haydovchining oxirgi `days` kunlik loglarini tasdiqlaydi (bulk-certification).
+ * DIQQAT: bu haqiqiy compliance amali — platformada haydovchi loglari
+ * "certified" bo'lib belgilanadi.
+ */
+export async function certifyDriver({ driverId, companyId, days = 8, ...auth }) {
+  const { ctx } = makeContext(auth);
+  if (!driverId) throw new Error('driverId required');
+
+  const end = new Date();
+  const start = new Date();
+  start.setDate(start.getDate() - days);
+
+  const res = await fetch(`${BASE}/v1/events/bulk-certification`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...headers(ctx.token, ctx.tenantId, companyId) },
+    body: JSON.stringify({
+      driver_id: driverId,
+      start_date: start.toISOString(),
+      end_date: end.toISOString(),
+      tenant_id: ctx.tenantId,
+    }),
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  });
+
+  if (res.status === 401) throw new TokenError('The token was rejected — paste a fresh one');
+  const body = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(body?.description || `Certify failed (${res.status})`);
+
+  // MUHIM: certify haydovchida tahrirlash sessiyasini ochib qoldiradi
+  // ("owned by ..."), shuning uchun uni darhol yopamiz — aks holda boshqa
+  // foydalanuvchilar o'sha haydovchini tahrirlay olmaydi.
+  await closeSession(ctx, driverId, companyId);
+  return { ok: true };
+}
+
+/** Haydovchi tahrirlash sessiyasini yopadi (lock'ni bo'shatadi). */
+export async function closeSession(ctx, driverId, companyId) {
+  try {
+    await fetch(`${BASE}/v1/hos-sessions/close`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...headers(ctx.token, ctx.tenantId, companyId) },
+      body: JSON.stringify({ driver_id: driverId, tenant_id: ctx.tenantId }),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+  } catch {
+    // Sessiyani yopolmaslik certify natijasini bekor qilmaydi — keyingi
+    // urinishda yoki fonda qayta yopishga harakat qilinadi.
+  }
 }

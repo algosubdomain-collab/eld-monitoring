@@ -6,6 +6,8 @@ import { Back } from '../components/Icons.jsx';
 import { findCategory } from '../lib/categories.js';
 import { sortRows } from '../lib/table.js';
 import { STATUS } from '../lib/format.js';
+import CompanyFilter from '../components/CompanyFilter.jsx';
+import { useCompany, byCompany } from '../lib/company.jsx';
 
 /**
  * Kategoriya sahifasi: tepada qisqa ma'lumot, pastda butun sahifani
@@ -14,9 +16,13 @@ import { STATUS } from '../lib/format.js';
 export default function Category({ data }) {
   const { slug } = useParams();
   const cat = findCategory(slug);
-  const [sort, setSort] = useState({ key: 'driverName', dir: 1 });
+  const [sort, setSort] = useState({ key: 'company', dir: 1 });
 
-  const all = useMemo(() => (cat ? data.drivers.filter(cat.match) : []), [data, cat]);
+  const { value: company } = useCompany();
+  const all = useMemo(
+    () => (cat ? byCompany(data.drivers.filter(cat.match), company) : []),
+    [data, cat, company]
+  );
   const rows = useMemo(() => sortRows(all, sort), [all, sort]);
 
   // Noma'lum manzil — bosh sahifaga qaytaramiz.
@@ -52,6 +58,10 @@ export default function Category({ data }) {
             </span>
           ))}
         </div>
+      </div>
+
+      <div className="controls">
+        <CompanyFilter drivers={data.drivers.filter(cat.match)} />
       </div>
 
       <FleetTable

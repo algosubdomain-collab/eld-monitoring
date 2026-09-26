@@ -42,6 +42,10 @@ export function normalizeDriver(raw = {}) {
     // Kompaniya — API haydovchi bilan birga qaytaradi.
     company: raw.company ?? raw.companyName ?? raw.carrier ?? '—',
     companyId: raw.companyId ?? null,
+    // Mashina UUID'i (log havolasi uchun) — truck raqamidan boshqa.
+    vehicleId: raw.vehicleId ?? null,
+    // Truck faol (active) yoki o'chirilgan (deactivated). Noma'lum → null.
+    truckActive: raw.truckActive ?? null,
     status: normalizeStatus(raw.status),
     // Manbaning xom status kodi (masalan DS_SB). "off_duty" ichida DS_PC ham
     // bor — dam olishni aniqlashda ular farqlanishi kerak.

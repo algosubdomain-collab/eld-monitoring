@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { COLUMNS } from '../components/cells.jsx';
 import Masthead from '../components/Masthead.jsx';
 import ProviderSwitcher from '../components/ProviderSwitcher.jsx';
@@ -7,8 +8,10 @@ import Hero from '../components/Hero.jsx';
 import Stats from '../components/Stats.jsx';
 import Ops from '../components/Ops.jsx';
 import Controls from '../components/Controls.jsx';
+import CompanyFilter from '../components/CompanyFilter.jsx';
 import FleetTable from '../components/FleetTable.jsx';
 import { filterRows, sortRows, toCsv } from '../lib/table.js';
+import { useCompany, byCompany } from '../lib/company.jsx';
 
 export default function Dashboard({
   data, error, busy, reload, auto, setAuto, updates,
@@ -16,7 +19,7 @@ export default function Dashboard({
 }) {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('all');
-  const [sort, setSort] = useState({ key: 'driverName', dir: 1 });
+  const [sort, setSort] = useState({ key: 'company', dir: 1 });
   const [columns, setColumns] = useState(COLUMNS);
   // Focus rejimi: faqat haydovchilar ro'yxati ko'rinadi.
   const [focus, setFocus] = useState(false);
@@ -33,19 +36,24 @@ export default function Dashboard({
     return () => window.removeEventListener('keydown', onKey);
   }, [focus]);
 
+  // Tanlangan kompaniya bo'yicha oldindan filtrlaymiz — qidiruv, status
+  // tablari va jadval shu doirada ishlaydi.
+  const { value: company } = useCompany();
+  const scoped = useMemo(() => byCompany(data.drivers, company), [data, company]);
+
   const rows = useMemo(
-    () => sortRows(filterRows(data.drivers, { query, status }), sort),
-    [data, query, status, sort]
+    () => sortRows(filterRows(scoped, { query, status }), sort),
+    [scoped, query, status, sort]
   );
 
   const counts = useMemo(() => {
-    const c = { all: data.drivers.length };
-    for (const d of data.drivers) c[d.status] = (c[d.status] ?? 0) + 1;
+    const c = { all: scoped.length };
+    for (const d of scoped) c[d.status] = (c[d.status] ?? 0) + 1;
     return c;
-  }, [data]);
+  }, [scoped]);
 
   return (
-    <div className={`page ${focus ? 'focused' : ''}`}>
+    <div className={`page narrow ${focus ? 'focused' : ''}`}>
       {error && <div className="banner"><strong>Source error:</strong>&nbsp;{error} — showing last known data.</div>}
 
       {data.incomplete && (
@@ -85,6 +93,7 @@ export default function Dashboard({
         auto={auto} onAuto={setAuto}
         onExport={() => toCsv(rows, columns, 'eld-fleet')}
         focus={focus} onFocus={toggleFocus}
+        company={<CompanyFilter drivers={data.drivers} />}
       />
 
       <FleetTable
@@ -99,6 +108,8 @@ export default function Dashboard({
           <span className="dim"> · {data.source.name} · {data.drivers.length} drivers</span>
         </span>
         <span style={{ flex: 1 }} />
+        <Link className="btn lime" to="/updates">Update Dashboard →</Link>
+        <Link className="btn" to="/requirements">Requirements</Link>
         <button className="btn" onClick={onConnections}>Connections</button>
         <button className="btn" onClick={onSignOut}>Sign out</button>
       </div>

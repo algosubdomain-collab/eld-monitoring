@@ -2,6 +2,9 @@ import { useMemo } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { Back } from '../components/Icons.jsx';
 import DriverName from '../components/DriverName.jsx';
+import CompanyFilter from '../components/CompanyFilter.jsx';
+import { CompanyNote } from '../lib/requirements.jsx';
+import { useCompany, byCompany } from '../lib/company.jsx';
 import {
   PROFILE_TIERS, CYCLE_TIERS, tierOf, cycleTierOf, daysSince,
 } from '../lib/ops.js';
@@ -35,23 +38,34 @@ export default function Tiered({ data, kind }) {
   const key = kind ?? params.slug;
   const view = KINDS[key];
 
+  // Bu bo'limga tushadigan barcha haydovchilar (filtr ro'yxati shulardan tuziladi).
+  const inView = useMemo(
+    () => (view ? data.drivers.filter((d) => view.tierOf(d)) : []),
+    [data, view]
+  );
+
+  const { value: company } = useCompany();
+
   const groups = useMemo(() => {
     if (!view) return {};
     const byTier = Object.fromEntries(view.tiers.map((t) => [t.key, []]));
-    for (const d of data.drivers) {
+    for (const d of byCompany(data.drivers, company)) {
       const tier = view.tierOf(d);
       if (tier) byTier[tier.key].push(d);
     }
-    // Har bir bo'limda eng shoshilinchi tepada tursin.
+    // Har bir bo'lim kompaniya bo'yicha saralanadi (bir kompaniya haydovchilari
+    // yonma-yon tursin), kompaniya ichida esa eng shoshilinchi tepada.
     for (const [tierKey, list] of Object.entries(byTier)) {
-      byTier[tierKey] = list.sort((a, b) =>
-        key === 'profile'
+      byTier[tierKey] = list.sort((a, b) => {
+        const byCompany = String(a.company ?? '').localeCompare(String(b.company ?? ''));
+        if (byCompany) return byCompany;
+        return key === 'profile'
           ? daysSince(b.profileUpdatedAt) - daysSince(a.profileUpdatedAt)
-          : a.cycleRemainingMin - b.cycleRemainingMin
-      );
+          : a.cycleRemainingMin - b.cycleRemainingMin;
+      });
     }
     return byTier;
-  }, [data, view, key]);
+  }, [data, view, key, company]);
 
   if (!view) return <Navigate to="/" replace />;
 
@@ -63,6 +77,7 @@ export default function Tiered({ data, kind }) {
         <Link className="logo back" to="/" title="Back to dashboard"><Back /></Link>
         <h1>{view.title}</h1>
         <span style={{ flex: 1 }} />
+        <CompanyFilter drivers={inView} />
         <span className="beat off"><i />{total} need attention</span>
       </div>
 
@@ -91,6 +106,7 @@ export default function Tiered({ data, kind }) {
                       <span className="meta">
                         <DriverName name={d.driverName} driver={d} />
                         <span className="id">{d.company} · {d.truck}</span>
+                        <CompanyNote companyId={d.companyId} />
                       </span>
                       <span style={{ flex: 1 }} />
                       <span className="pill" style={{ '--c': STATUS[d.status]?.color ?? 'var(--slate)' }}>
