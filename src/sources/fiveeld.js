@@ -98,25 +98,51 @@ async function api(path, ctx, companyUid, attempt = 0) {
   }
 
   const body = await res.json().catch(() => null);
-  const message = body?.error?.message ?? res.statusText;
+
+  // Muvaffaqiyatli javobni tekshirmaymiz: ilgari "access/permission" qidiruvi
+  // 200 javoblarga ham qo'llanardi.
+  if (res.ok) return body;
+
+  const message = String(body?.error?.message ?? res.statusText ?? '');
 
   if (res.status === 403 || /access|permission/i.test(message)) {
-    throw new AccessError(message);
+    throw new AccessError(message || 'No access to this company');
   }
 
-  if (!res.ok) {
-    // Kvota yoki server xatosi — kutib qayta urinamiz.
-    if ((res.status === 429 || res.status >= 500) && attempt < MAX_RETRIES) {
-      await sleep(Math.min(400 * 2 ** attempt, MAX_BACKOFF_MS) + Math.random() * 400);
-      return api(path, ctx, companyUid, attempt + 1);
-    }
-    throw new Error(`${res.status} ${path} — ${message}`);
+  // Kvota yoki server xatosi — kutib qayta urinamiz.
+  if ((res.status === 429 || res.status >= 500) && attempt < MAX_RETRIES) {
+    await sleep(Math.min(400 * 2 ** attempt, MAX_BACKOFF_MS) + Math.random() * 400);
+    return api(path, ctx, companyUid, attempt + 1);
   }
-  return body;
+  throw new Error(`${res.status} ${path} — ${message}`);
 }
 
-// Kesh provayder akkaunti (token) bo'yicha — har akkaunt o'z kompaniyalarini ko'radi.
+/**
+ * Kompaniya o'chirilganmi. API buni turlicha qaytarishi mumkin, shuning uchun
+ * hammasini tekshiramiz: avvalgi `is_active !== false` sinovi yetarli emas edi —
+ * `0` ham (`0 !== false` rost bo'lgani uchun) faol deb o'tib ketardi.
+ */
+function isInactiveCompany(c) {
+  for (const v of [c.is_active, c.isActive, c.active, c.enabled]) {
+    if (v === false || v === 0 || v === '0' || v === 'false') return true;
+  }
+  const status = String(c.status ?? c.company_status ?? '').trim().toLowerCase();
+  return status === 'inactive' || status === 'disabled' || status === 'deactivated';
+}
+
+/** Kompaniyadagi haydovchilar soni, agar API bersa. Bermasa — null. */
+function driverCount(c) {
+  for (const v of [c.active_driver, c.active_drivers, c.drivers_count, c.driverCount]) {
+    const n = Number(v);
+    if (v != null && Number.isFinite(n)) return n;
+  }
+  return null;
+}
+
+// Kesh provayder akkaunti (token) bo'yicha — har akkaunt o'z kompaniyalarini
+// ko'radi. Token almashgani sari yangi yozuv qo'shilmasin deb chegaralangan.
 const companyCaches = new Map();
+const COMPANY_CACHE_MAX = 50;
 
 async function getCompanies(ctx) {
   const cached = companyCaches.get(ctx.token);
@@ -124,9 +150,13 @@ async function getCompanies(ctx) {
 
   const body = await api('/dashboards/v3/getcompanies', ctx, null);
   const list = (body?.companies ?? [])
-    .filter((c) => c.is_active !== false && c.uid)
-    .map((c) => ({ id: c.uid, name: c.name?.trim() || '—' }));
+    .filter((c) => c.uid && !isInactiveCompany(c))
+    .map((c) => ({ id: c.uid, name: c.name?.trim() || '—', drivers: driverCount(c) }));
 
+  // Map kiritish tartibini saqlaydi — eng eskisini chiqaramiz.
+  if (companyCaches.size >= COMPANY_CACHE_MAX) {
+    companyCaches.delete(companyCaches.keys().next().value);
+  }
   companyCaches.set(ctx.token, { at: Date.now(), list });
   return list;
 }
@@ -145,20 +175,30 @@ async function pool(items, limit, worker) {
   return out;
 }
 
-/** Bitta kompaniyaning barcha haydovchilari (sahifalab). */
+// Cheksiz aylanishdan himoya — 200 sahifa = 20 000 haydovchi.
+const MAX_PAGES = 200;
+
+/**
+ * Bitta kompaniyaning barcha haydovchilari (sahifalab).
+ * To'liq bo'lmagan sahifa kelishi oxirini bildiradi — "total" maydoni
+ * yo'q yoki boshqa ma'noda bo'lsa ham to'g'ri ishlaydi. Ilgari "total"
+ * kelmasa ikkinchi sahifa umuman so'ralmasdi.
+ */
 async function companyRows(ctx, companyUid) {
   const date = encodeURIComponent(logDate());
-  const first = await api(
-    `/logs/v3/logslist?page=1&perPage=${PAGE_SIZE}&date=${date}`, ctx, companyUid
-  );
-  const rows = [...(first?.data ?? [])];
-  const total = Number(first?.total ?? rows.length);
+  const rows = [];
 
-  for (let page = 2; (page - 1) * PAGE_SIZE < total; page += 1) {
-    const next = await api(
+  for (let page = 1; page <= MAX_PAGES; page += 1) {
+    const body = await api(
       `/logs/v3/logslist?page=${page}&perPage=${PAGE_SIZE}&date=${date}`, ctx, companyUid
     );
-    rows.push(...(next?.data ?? []));
+    const batch = body?.data ?? [];
+    rows.push(...batch);
+
+    if (batch.length < PAGE_SIZE) break;
+
+    const total = Number(body?.total);
+    if (Number.isFinite(total) && total > 0 && rows.length >= total) break;
   }
   return rows;
 }
@@ -208,6 +248,11 @@ function toDriver(row, company) {
     breakRemainingMin: toMin(row.timers?.break),
     violations: toTexts(row),
     location: row.tracking?.address || row.status?.address || '—',
+    // Platforma koordinatani qaysi nom bilan berishi aniq emas — ehtimoliy
+    // variantlarni ketma-ket sinaymiz, topilmasa null bo'lib qoladi.
+    lat: row.tracking?.lat ?? row.tracking?.latitude ?? row.status?.lat ?? null,
+    lon: row.tracking?.lon ?? row.tracking?.lng ?? row.tracking?.longitude
+      ?? row.status?.lon ?? null,
     speedMph: row.tracking?.speed ?? null,
     lastUpdate: row.tracking?.date || row.timers?.date || null,
     online: row.isOnline !== false,
@@ -259,7 +304,10 @@ export async function fetchDrivers({ token, probeOnly = false } = {}) {
     return { provider: { id: 'fiveeld', name: meta.name }, drivers: [], companies: list.length };
   }
 
-  const companies = await getCompanies(ctx);
+  const all = await getCompanies(ctx);
+  // Haydovchisi yo'qligi aniq bo'lgan kompaniyalarni so'ramaymiz. Son noma'lum
+  // bo'lsa (null) so'raymiz — bilmay turib tashlab ketmaymiz.
+  const companies = all.filter((c) => c.drivers == null || c.drivers > 0);
   const failed = [];
   const restricted = [];
 

@@ -58,6 +58,10 @@ export function normalizeDriver(raw = {}) {
     violations: Array.isArray(raw.violations) ? raw.violations
       : raw.violations ? [String(raw.violations)] : [],
     location: raw.location ?? raw.address ?? '—',
+    // Koordinatalar — yaqin-atrofdagi joylarni (masalan DOT tarozilari)
+    // aniqlash uchun. Manba bermasa null.
+    lat: toCoord(raw.lat ?? raw.latitude),
+    lon: toCoord(raw.lon ?? raw.lng ?? raw.longitude),
     // Haydovchi profil formasi oxirgi marta qachon o'zgargan.
     profileUpdatedAt: raw.profileUpdatedAt ? new Date(raw.profileUpdatedAt).toISOString() : null,
     speedMph: raw.speedMph ?? raw.speed ?? null,
@@ -68,6 +72,13 @@ export function normalizeDriver(raw = {}) {
     eldConnected: raw.eldConnected !== undefined ? raw.eldConnected !== false : raw.online !== false,
     lastUpdate: raw.lastUpdate ? new Date(raw.lastUpdate).toISOString() : null,
   };
+}
+
+/** Koordinata — faqat haqiqiy son va mantiqiy oraliqda bo'lsa qabul qilinadi. */
+function toCoord(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n) || n === 0) return null;
+  return Math.abs(n) <= 180 ? n : null;
 }
 
 /** Cycle qoldig'i shundan kam bo'lsa haydovchi "need cycle" hisoblanadi. */

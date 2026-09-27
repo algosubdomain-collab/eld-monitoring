@@ -27,6 +27,27 @@
   --r-lg:14px;
   --r-md:12px;
   --r-sm:9px;
+  --r-pill:999px;
+
+  /* Matn pog'onalari — bitta o'lchov oilasi. Yangi o'lcham o'ylab topish
+     o'rniga shulardan tanlanadi, shunda sahifa bir maromda o'qiladi. */
+  --t-2xs:9.5px;   /* badge, eng kichik yorliq */
+  --t-xs:10.5px;   /* ustun sarlavhalari, chiplar */
+  --t-sm:11.5px;   /* ikkilamchi raqamlar */
+  --t-md:12.5px;   /* yordamchi matn, tugmalar */
+  --t-base:13px;   /* katak matni */
+  --t-lg:15px;     /* ajratib ko'rsatiladigan raqam */
+
+  /* Bo'shliqlar — 4px panjara. */
+  --s-1:4px;
+  --s-2:8px;
+  --s-3:12px;
+  --s-4:16px;
+  --s-5:22px;
+
+  /* Jadval qatori — bir xil balandlik. Chip bor-yo'qligiga qarab qator
+     bo'yi o'zgarsa, ko'z uchun ritm buziladi. */
+  --row-h:58px;
 
   /* Soya deyarli yo'q — chuqurlikni chiziq beradi. */
   --lift:0 1px 2px rgba(0,0,0,.28);
@@ -732,61 +753,83 @@ a.nm.link:hover{color:var(--lime);text-decoration:underline;text-underline-offse
 .page.narrow{padding:16px 12px 40px;max-width:none}
 
 .board{overflow-x:auto;overflow-y:visible;padding:0;border:none;background:none;box-shadow:none}
-/* Ustunlar: idx, driver(+cycle), unit, eld, driving-left, status, update */
+/* Ustunlar: idx, check, driver(+cycle), unit, responsible, dot, status, profile form, drive, certify */
 .brow{display:grid;
-  grid-template-columns:32px minmax(210px,1.2fr) 92px 134px 168px minmax(150px,1fr) 100px 132px;
-  align-items:center;min-width:1120px;border-bottom:1px solid var(--line)}
+  grid-template-columns:34px 44px minmax(230px,1.3fr) 92px 150px 52px 168px minmax(150px,1fr) 100px 132px;
+  align-items:center;min-width:1230px;min-height:var(--row-h);
+  border-bottom:1px solid var(--line)}
 .brow:last-child{border-bottom:none}
-.bhead{position:sticky;top:0;z-index:5;background:var(--canvas);
-  font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
-.bhead .bc{padding:9px 8px;white-space:nowrap}
-.bc{padding:7px 8px;min-width:0;font-size:13px}
-.bc.bidx{color:var(--ink-3);font-variant-numeric:tabular-nums;font-size:11.5px}
-.bc.bname{display:flex;align-items:center;gap:12px}
+.bhead{position:sticky;top:0;z-index:5;background:var(--canvas);min-height:0;
+  font-size:var(--t-xs);font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.bhead .bc{padding:var(--s-2);white-space:nowrap}
+.bc{padding:var(--s-1) var(--s-2);min-width:0;font-size:var(--t-base)}
+.bc.bidx{color:var(--ink-3);font-variant-numeric:tabular-nums;font-size:var(--t-sm)}
+.bc.bname{display:flex;align-items:center;gap:var(--s-3)}
 .bc.bunit{color:var(--ink-2)}
 .brow:not(.bhead):hover{background:var(--card-2)}
 .bc .nil{color:var(--ink-3)}
-.drivetime{font-size:13.5px;font-weight:600;letter-spacing:-.01em}
+.drivetime{font-size:var(--t-base);font-weight:600;letter-spacing:-.01em}
 
-/* Ism + suggestion ustun-ichi */
-.ninfo{display:flex;flex-direction:column;gap:3px;min-width:0}
-/* Cycle bo'yicha kichik maslahat — notification kabi */
-.sugg{display:inline-flex;align-items:center;gap:5px;align-self:flex-start;
-  font-size:10.5px;font-weight:600;letter-spacing:.02em;padding:2px 8px;border-radius:999px;
-  color:var(--c);background:color-mix(in srgb,var(--c) 15%,transparent)}
-.sugg i{width:5px;height:5px;border-radius:50%;background:var(--c);flex:none;
-  box-shadow:0 0 6px var(--c)}
+/* Ism qatori — ism va belgisi yonma-yon, qator bo'yi o'zgarmaydi */
+.ninfo{display:flex;align-items:center;gap:var(--s-2);min-width:0}
+.ninfo .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 
 /* Cycle qoldig'i — glowli aylana progress (Spline uslubi) */
+.cwrap{position:relative;flex:none;display:grid;place-items:center}
 .cring{position:relative;width:44px;height:44px;flex:none;display:grid;place-items:center}
-.cring svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
+/* Arc pastdan boshlanadi: cycle kam qolganda kichik yoy halqaning quyi
+   chap tomonida chiziladi — ya'ni tepadagi xabarnoma yorlig'i ostida
+   qolib ketmaydi. Bir vaqtning o'zida "to'lib borish" ma'nosini ham beradi. */
+.cring svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(90deg)}
 .cring .crtrack{fill:none;stroke:var(--card-3);stroke-width:3.5}
 .cring .crprog{fill:none;stroke:var(--c);stroke-width:3.5;stroke-linecap:round;
   filter:drop-shadow(0 0 4px color-mix(in srgb,var(--c) 70%,transparent));
   transition:stroke-dashoffset .5s cubic-bezier(.4,0,.2,1)}
-.cring b{font-size:13px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;z-index:1}
+.cring b{font-size:var(--t-base);font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;z-index:1}
+
+/* Halqa ustidagi xabarnoma — ogohlantirish aynan shu raqamga tegishli.
+   Fon rangidagi halqa uni progress chizig'idan ajratib turadi. */
+.cbadge{position:absolute;top:-5px;left:50%;transform:translateX(-50%);z-index:3;
+  white-space:nowrap;cursor:pointer;font:inherit;line-height:1;
+  font-size:var(--t-2xs);font-weight:700;letter-spacing:.02em;
+  padding:3px 7px;border-radius:var(--r-pill);
+  color:var(--c);background:color-mix(in srgb,var(--c) 18%,var(--canvas));
+  border:1px solid color-mix(in srgb,var(--c) 45%,transparent);
+  box-shadow:0 0 0 3px var(--canvas),0 0 10px -2px color-mix(in srgb,var(--c) 60%,transparent);
+  animation:cbadgein .22s cubic-bezier(.2,.8,.3,1)}
+.cbadge:hover{color:var(--canvas);background:var(--c);border-color:var(--c)}
+.cbadge:focus-visible{outline:2px solid var(--c);outline-offset:3px}
+@keyframes cbadgein{from{opacity:0;transform:translate(-50%,3px) scale(.92)}
+  to{opacity:1;transform:translateX(-50%)}}
+/* Qator ustiga kelganda yorliq biroz ko'tarilib, bosish mumkinligini bildiradi */
+.brow:hover .cbadge{box-shadow:0 0 0 3px var(--canvas),0 0 14px -2px color-mix(in srgb,var(--c) 75%,transparent)}
 
 /* Kompaniya guruhi */
 .bgroup{border-bottom:1px solid var(--line)}
 .bgroup:last-child{border-bottom:none}
-.bgrouphead{display:flex;align-items:center;gap:9px;width:100%;min-width:1120px;
+.bgrouphead{display:flex;align-items:center;width:100%;min-width:1230px;
   padding:9px 10px;background:var(--card);border:none;cursor:pointer;
-  color:var(--ink);font:inherit;font-weight:600;font-size:12.5px;text-align:left;position:sticky;left:0}
+  color:var(--ink);font:inherit;font-weight:600;font-size:var(--t-md);text-align:left}
+/* Element o'zi butun kenglikni egallaydi, shuning uchun ichidagi matnni
+   yopishtiramiz — gorizontal siljiganda kompaniya nomi chapda qoladi. */
+.bgrouphead .ghinner{position:sticky;left:10px;display:flex;align-items:center;gap:9px}
 .bgrouphead:hover{background:var(--card-2)}
-.bgrouphead .caret{color:var(--ink-3);transition:transform .15s;display:inline-block;font-size:11px}
+.bgrouphead .caret{color:var(--ink-3);transition:transform .15s;display:inline-block;font-size:var(--t-sm)}
 .bgrouphead .caret.open{transform:rotate(90deg)}
-.bgrouphead .cocount{font-size:11px;color:var(--ink-3)}
+.bgrouphead .cocount{font-size:var(--t-sm);color:var(--ink-3)}
 
 /* ---------- Notion uslubidagi dropdown ---------- */
 .ddbtn{display:inline-flex;align-items:center;gap:7px;max-width:100%;white-space:nowrap;border:1px solid transparent;
-  cursor:pointer;font:inherit;font-size:12.5px;font-weight:500;padding:4px 8px 4px 10px;border-radius:999px;
+  cursor:pointer;font:inherit;font-size:var(--t-md);font-weight:500;padding:4px 8px 4px 10px;border-radius:var(--r-pill);
   background:color-mix(in srgb,var(--c) 15%,transparent);color:var(--c);transition:.12s}
 .ddbtn i{width:6px;height:6px;border-radius:50%;background:var(--c);flex:none;
   box-shadow:0 0 6px color-mix(in srgb,var(--c) 80%,transparent)}
 .ddbtn:not(.empty){box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--c) 22%,transparent)}
 .ddbtn .ddcaret{width:12px;height:12px;margin-left:auto;opacity:.6;flex:none}
-.ddbtn.empty{background:none;color:var(--ink-3);border-color:var(--line)}
-.ddbtn.empty:hover{background:var(--card-3);color:var(--ink-2)}
+.ddbtn.empty{background:none;color:var(--ink-3);border-color:transparent;padding-left:var(--s-2)}
+.ddbtn.empty .ddcaret{opacity:0;transition:opacity .12s}
+.ddbtn.empty:hover,.ddbtn.empty:focus-visible{background:var(--card-3);color:var(--ink-2)}
+.ddbtn.empty:hover .ddcaret,.ddbtn.empty:focus-visible .ddcaret{opacity:.55}
 .ddbtn.active{box-shadow:0 0 0 2px color-mix(in srgb,var(--lime) 35%,transparent)}
 
 .ddmenu{position:fixed;z-index:80;padding:6px;border-radius:12px;
@@ -796,7 +839,7 @@ a.nm.link:hover{color:var(--lime);text-decoration:underline;text-underline-offse
   transform-origin:top left;animation:ddin .13s cubic-bezier(.2,.7,.3,1)}
 @keyframes ddin{from{opacity:0;transform:translateY(-4px) scale(.97)}to{opacity:1;transform:none}}
 .ddopt{display:flex;align-items:center;gap:9px;width:100%;border:none;cursor:pointer;
-  background:none;font:inherit;font-size:13px;color:var(--ink-2);text-align:left;
+  background:none;font:inherit;font-size:var(--t-base);color:var(--ink-2);text-align:left;
   padding:8px 10px;border-radius:8px;transition:background .1s}
 .ddopt i{width:8px;height:8px;border-radius:50%;background:var(--c);flex:none}
 .ddopt .ddlabel{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -816,7 +859,7 @@ a.nm.link:hover{color:var(--lime);text-decoration:underline;text-underline-offse
 .modalhead .iconbtn{width:30px;height:30px;font-size:14px}
 .modalbody{padding:16px 18px;overflow-y:auto;display:flex;flex-direction:column;gap:22px}
 .modalfoot{display:flex;justify-content:flex-end;gap:10px;padding:14px 18px;border-top:1px solid var(--line)}
-.fl{font-size:12.5px;font-weight:600;color:var(--ink-2)}
+.fl{font-size:var(--t-md);font-weight:600;color:var(--ink-2)}
 .fl .gateinput{width:100%}
 
 /* Settings variant ro'yxati */
@@ -825,15 +868,13 @@ a.nm.link:hover{color:var(--lime);text-decoration:underline;text-underline-offse
 .optrow{display:flex;align-items:center;gap:8px}
 .optrow .gateinput{flex:1;letter-spacing:normal}
 .swatch{width:22px;height:22px;border-radius:6px;border:none;cursor:pointer;flex:none}
-.iconbtn.sm{width:26px;height:26px;font-size:12px}
+.iconbtn.sm{width:26px;height:26px;font-size:var(--t-md)}
 .optadd{display:flex;gap:8px}
 .optadd .gateinput{flex:1;letter-spacing:normal}
 
-/* Certify — yashil nuqta + tugma */
-.certcell{display:flex;align-items:center;gap:8px}
-.certdot{width:8px;height:8px;border-radius:50%;background:var(--card-3);flex:none;transition:.2s}
-.certdot.on{background:var(--lime);box-shadow:0 0 8px var(--lime)}
+/* Certify — holatni tugmaning o'zi bildiradi */
 .certbtn{white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+.certbtn.lit{color:var(--lime);border-color:color-mix(in srgb,var(--lime) 30%,transparent)}
 .certbtn.confirm{background:var(--amber);border-color:var(--amber);color:#1a1206}
 .certbtn.doing{color:var(--ink-2)}
 .certbtn.done{color:var(--lime);border-color:color-mix(in srgb,var(--lime) 35%,transparent)}
@@ -845,29 +886,196 @@ a.nm.link:hover{color:var(--lime);text-decoration:underline;text-underline-offse
 
 /* Unit — truck active/deactive nuqtasi */
 .bc.bunit{display:flex;align-items:center;gap:7px;color:var(--ink-2)}
-.unitdot{width:7px;height:7px;border-radius:50%;flex:none}
-.unitdot.on{background:var(--lime);box-shadow:0 0 6px var(--lime)}
-.unitdot.off{background:var(--ink-3)}
+.unitdot{width:6px;height:6px;border-radius:50%;flex:none;background:var(--ink-3)}
 
-/* Ism ostidagi chip'lar: suggestion + profile changed */
-.chips{display:flex;flex-wrap:wrap;gap:5px}
-.sugg .suggx{margin-left:3px;opacity:.55;font-size:9px}
-.sugg:hover .suggx{opacity:1}
-.sugg{border:none;cursor:pointer}
-.pchg{display:inline-flex;align-items:center;font-size:10.5px;font-weight:600;letter-spacing:.02em;
-  padding:2px 8px;border-radius:999px;color:var(--sky);
-  background:color-mix(in srgb,var(--sky) 15%,transparent)}
+/* Ism yonidagi belgi — profil yaqinda o'zgargan bo'lsa */
+.pchg{flex:none;font-size:var(--t-xs);font-weight:500;color:var(--sky);opacity:.75}
 
 /* Responsible inline input */
-.textcell{font:inherit;font-size:13px;color:var(--ink);background:none;border:1px solid transparent;
+.textcell{font:inherit;font-size:var(--t-base);color:var(--ink);background:none;border:1px solid transparent;
   border-radius:7px;padding:5px 8px;width:100%;transition:.12s}
 .textcell::placeholder{color:var(--ink-3)}
 .textcell:hover{border-color:var(--line)}
 .textcell:focus{outline:none;border-color:var(--lime);background:var(--card-2)}
 
 /* Drive left — soat ko'rinishi (time style) */
-.timeleft{display:inline-flex;align-items:center;gap:6px;color:var(--c);
+.timeleft{display:inline-flex;align-items:center;color:var(--c);
   font-variant-numeric:tabular-nums}
-.timeleft svg{width:15px;height:15px;flex:none;opacity:.9}
-.timeleft b{font-size:15px;font-weight:700;letter-spacing:-.01em;
+.timeleft b{font-size:var(--t-base);font-weight:700;letter-spacing:-.01em;
   font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace}
+
+/* Moslashuvchan bo'shliq — o'ngdagi elementlarni chetga suradi */
+.spacer{flex:1}
+
+/* ================= Board tab'lari (kompaniyalar bo'limi) ================= */
+.btabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;padding-bottom:2px}
+.btab{display:inline-flex;align-items:center;gap:7px;font:inherit;font-size:var(--t-base);font-weight:500;
+  color:var(--ink-3);background:none;border:1px solid transparent;border-radius:var(--r-pill);
+  padding:7px 13px;cursor:pointer;transition:.14s}
+.btab:hover{color:var(--ink-2);background:var(--card-2)}
+.btab.on{color:var(--ink);background:var(--card-2);border-color:var(--line)}
+.btab:focus-visible{outline:2px solid var(--lime);outline-offset:2px}
+.btab .btcount{font-size:var(--t-sm);font-variant-numeric:tabular-nums;color:var(--ink-3);
+  background:var(--card-3);border-radius:var(--r-pill);padding:1px 7px}
+.btab.on .btcount{color:var(--lime);background:color-mix(in srgb,var(--lime) 14%,transparent)}
+
+/* Controls qatoridagi hisoblagich — masthead'dagi kabi */
+.cmeta{font-size:var(--t-md);color:var(--ink-3);white-space:nowrap;font-variant-numeric:tabular-nums}
+.cmeta.done{color:var(--lime)}
+
+/* Qidiruvni tozalash tugmasi */
+.field{position:relative}
+.fieldx{position:absolute;right:8px;width:22px;height:22px;display:grid;place-items:center;
+  border:none;border-radius:50%;background:var(--card-3);color:var(--ink-3);
+  font-size:var(--t-sm);line-height:1;cursor:pointer;transition:.12s}
+.fieldx:hover{color:var(--ink);background:#394046}
+.fieldx:focus-visible{outline:2px solid var(--lime);outline-offset:1px}
+.field input[type=search]::-webkit-search-cancel-button{display:none}
+
+/* ================= Tekshirildi belgisi (checkbox) ================= */
+.bc.bcheck{display:flex;justify-content:center;padding-left:0;padding-right:0}
+
+/* Qatordagi checkbox — haqiqiy input, ko'rinishi .chkbox da.
+   Shift bilan bosilganda matn belgilanib ketmasin. */
+.chk{display:grid;place-items:center;cursor:pointer;position:relative;user-select:none}
+.chk input{position:absolute;width:1px;height:1px;opacity:0;margin:0}
+.chkbox{width:20px;height:20px;flex:none;display:grid;place-items:center;
+  border:1.5px solid var(--line);border-radius:6px;background:none;padding:0;cursor:pointer;
+  transition:background .14s,border-color .14s}
+.chkbox svg{width:12px;height:12px;color:var(--ink-3);opacity:0;transform:scale(.6);
+  transition:opacity .14s,transform .14s}
+.chk:hover .chkbox{border-color:var(--ink-3);background:var(--card-3)}
+.chk:hover .chkbox svg{opacity:.45;transform:none}
+.chk input:checked + .chkbox{background:var(--lime);border-color:var(--lime)}
+.chk input:checked + .chkbox svg{color:#111a06;opacity:1;transform:none}
+.chk input:focus-visible + .chkbox{outline:2px solid var(--lime);outline-offset:2px}
+
+/* Sarlavhadagi umumiy belgi (hech biri / qismi / hammasi) */
+.chkbox.head{border-style:solid}
+.chkbox.head:hover{border-color:var(--ink-3);background:var(--card-3)}
+.chkbox.head:hover svg{opacity:.45;transform:none}
+.chkbox.head.some{border-color:var(--lime)}
+.chkbox.head.all{background:var(--lime);border-color:var(--lime)}
+.chkbox.head.all svg{color:#111a06;opacity:1;transform:none}
+.chkbox.head.armed{background:var(--amber);border-color:var(--amber);animation:nudge .3s ease}
+.chkbox.head.armed svg{color:#1a1206}
+.chkbox.head:disabled{opacity:.4;cursor:not-allowed}
+.chkbox.head:focus-visible{outline:2px solid var(--lime);outline-offset:2px}
+.chkdash{width:9px;height:2px;border-radius:2px;background:var(--lime)}
+
+/* Belgilangan qator — chapda yupqa yashil chiziq, matni so'niqroq */
+.brow.checked .bc.bname,.brow.checked .bc.bunit{opacity:.6}
+.brow.checked .bc.bidx{color:var(--lime);opacity:.8}
+
+/* ---------- Kengda gorizontal siljiganda chap ustunlar joyida qolsin ---------- */
+.bc.sticky{position:sticky;background:var(--canvas);z-index:2}
+.bc.sticky.s0{left:0}
+.bc.sticky.s1{left:34px}
+.bc.sticky.s2{left:78px;box-shadow:1px 0 0 var(--line)}
+.brow:not(.bhead):hover .bc.sticky{background:var(--card-2)}
+.bhead .bc.sticky{z-index:7}
+
+/* ================= DOT ustuni ================= */
+.bc.bdot{display:flex;justify-content:center;padding-left:0;padding-right:0}
+.dotcell{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;
+  text-decoration:none;transition:background .12s}
+.dotcell:hover{background:var(--card-3)}
+.dotcell:focus-visible{outline:2px solid var(--lime);outline-offset:2px}
+.dotpin{width:8px;height:8px;border-radius:50%;background:var(--ink-3);transition:.2s}
+.dotcell:hover .dotpin{background:var(--ink-2)}
+/* Yo'lida tarozi bor — qizil yonib turadi, o'tib ketgach o'chadi */
+.dotcell.on .dotpin{background:var(--red);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--red) 18%,transparent),0 0 10px var(--red);
+  animation:dotpulse 1.8s ease-in-out infinite}
+@keyframes dotpulse{
+  50%{box-shadow:0 0 0 6px color-mix(in srgb,var(--red) 8%,transparent),0 0 15px var(--red)}
+}
+
+/* ================= Settings modali: bo'limlar ================= */
+.modalcard.wide{width:min(720px,100%)}
+.stabs{display:flex;gap:4px;padding:10px 18px 0;border-bottom:1px solid var(--line)}
+.stab{font:inherit;font-size:var(--t-base);font-weight:500;color:var(--ink-3);background:none;border:none;
+  border-bottom:2px solid transparent;padding:8px 10px 10px;cursor:pointer;transition:.14s}
+.stab:hover{color:var(--ink-2)}
+.stab.on{color:var(--ink);border-bottom-color:var(--lime)}
+.stab:focus-visible{outline:2px solid var(--lime);outline-offset:-2px;border-radius:4px}
+/* Bo'lim almashganda modal sakramasin — balandlik qat'iy, ichi siljiydi.
+   Shu sabab Cancel/Save tugmalari ham doim bir joyda turadi. */
+.modalcard.wide .modalbody{height:min(58vh,430px)}
+.shint{margin:0;font-size:var(--t-md);line-height:1.55;color:var(--ink-3)}
+.shint.warn{color:var(--amber)}
+.optset select.gateinput{cursor:pointer}
+.tierempty.sm{padding:14px 12px;font-size:var(--t-md)}
+.emptyact{margin-top:12px}
+.footnote{margin-right:auto;font-size:var(--t-md);color:var(--ink-3)}
+.btn.danger{color:var(--red);border-color:color-mix(in srgb,var(--red) 35%,transparent)}
+.btn.danger:hover{background:color-mix(in srgb,var(--red) 14%,transparent);border-color:var(--red)}
+
+/* Board tahrirlagichi */
+.bdlist{display:flex;flex-direction:column;gap:8px}
+.bdrow{border:1px solid var(--line);border-radius:var(--r-sm);background:var(--card-2)}
+.bdrow.open{border-color:#394046}
+.bdhead{display:flex;align-items:center;gap:8px;padding:8px}
+.bdhead .gateinput{flex:1;letter-spacing:normal;min-width:80px}
+.bdcaret{color:var(--ink-3)}
+.bdcount{font-size:var(--t-sm);color:var(--ink-3);font-variant-numeric:tabular-nums;white-space:nowrap}
+.bdpick{border-top:1px solid var(--line);padding:10px;display:flex;flex-direction:column;gap:9px}
+.bdacts{display:flex;gap:14px}
+.linkbtn{font:inherit;font-size:var(--t-md);font-weight:500;color:var(--ink-3);background:none;border:none;
+  padding:0;cursor:pointer;transition:.12s}
+.linkbtn:hover{color:var(--lime)}
+.linkbtn:disabled{opacity:.4;cursor:not-allowed}
+.linkbtn:disabled:hover{color:var(--ink-3)}
+.linkbtn:focus-visible{outline:2px solid var(--lime);outline-offset:2px;border-radius:3px}
+.bdcos{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:2px;
+  max-height:260px;overflow-y:auto}
+.bdco{display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:7px;cursor:pointer;
+  font-size:var(--t-base);color:var(--ink-2);transition:background .12s}
+.bdco:hover{background:var(--card-3);color:var(--ink)}
+.bdco input{width:15px;height:15px;flex:none;accent-color:var(--lime);cursor:pointer}
+.bdconame{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bdcocount{font-size:var(--t-sm);color:var(--ink-3);font-variant-numeric:tabular-nums}
+
+/* Ommaviy biriktirish tugmasi — asosiy amal + boshqa mas'ulni tanlash */
+.assign{position:relative;display:inline-flex}
+.assignmain{border-top-right-radius:0;border-bottom-right-radius:0}
+.assigncaret{border-top-left-radius:0;border-bottom-left-radius:0;margin-left:-1px;
+  padding-left:var(--s-2);padding-right:var(--s-2)}
+.assigncaret svg{width:13px;height:13px}
+.assign .btn:hover{z-index:1}
+.assignmenu{position:absolute;top:calc(100% + 6px);right:0;left:auto;min-width:210px}
+/* Qamrov tanlagichi — ilovadagi umumiy segment uslubi */
+.scopesw{margin:2px 2px 6px}
+.scopesw .seg{flex:1;justify-content:center;font-size:var(--t-md)}
+
+/* Dropdown: klaviatura kursori va bo'sh ro'yxat holati */
+.ddopt.cursor{background:var(--card-3);color:var(--ink)}
+.ddopt.ddempty{color:var(--ink-3);font-size:var(--t-md)}
+.ddopt.ddempty.as-text{cursor:default}
+.ddopt.ddempty:not(.as-text):hover{color:var(--lime)}
+/* Ro'yxatdan olib tashlangan qiymat — ko'rinadi, lekin "yaroqsiz" ko'rinishda */
+.ddbtn.orphan{color:var(--ink-3);border-style:dashed;border-color:var(--line);background:none}
+.ddbtn.orphan i{background:var(--ink-3);box-shadow:none}
+
+/* Kompaniya guruhi: hammasi tekshirilgan bo'lsa ko'rinib tursin */
+.bgrouphead .cocount.done{color:var(--lime)}
+.bgrouphead:focus-visible{outline:2px solid var(--lime);outline-offset:-2px}
+
+/* Tor ekranda board tab'lari gorizontal aylanadi */
+@media (max-width:640px){
+  .btabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+  .btabs::-webkit-scrollbar{display:none}
+  .btab{flex:none}
+
+  /* Tepadagi tugmalar ekrandan chiqib ketmasin — sarlavha o'z qatorida,
+     tugmalar pastida qatorlanadi. */
+  .page.narrow .masthead{flex-wrap:wrap;row-gap:10px}
+  .page.narrow .masthead h1{flex:1 1 auto;min-width:0}
+  .page.narrow .masthead .spacer{display:none}
+  .page.narrow .masthead .btn,.page.narrow .masthead a.btn{flex:1 1 auto;justify-content:center}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .chkbox,.chkbox svg,.btab,.stab{transition:none}
+  .chkbox.head.armed,.dotcell.on .dotpin{animation:none}
+}

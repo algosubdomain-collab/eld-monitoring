@@ -1,7 +1,11 @@
-// Update board sozlamalari — foydalanuvchi o'zi moslashtiradigan variantlar:
-// Status va Update ustunlaridagi tanlovlar (nom + rang).
+// Update board sozlamalari — foydalanuvchi o'zi moslashtiradigan qismlar:
+//   statuses/profileForms — Status va Profile Form ustunlaridagi tanlovlar;
+//   responsibles     — Responsible ustunidagi odamlar ro'yxati;
+//   me               — shu foydalanuvchining o'z ismi ("hammasiga o'zimni qo'y");
+//   boards           — kompaniyalarni bo'lib ishlatish uchun board'lar.
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 const FILE = path.join(
@@ -11,6 +15,9 @@ const FILE = path.join(
 // Ruxsat etilgan ranglar (web styles.css dagi o'zgaruvchilar).
 const COLORS = ['lime', 'amber', 'violet', 'slate', 'red', 'sky'];
 
+const MAX_BOARDS = 20;
+const MAX_BOARD_COMPANIES = 400;
+
 const DEFAULTS = {
   statuses: [
     { label: 'All good', color: 'lime' },
@@ -18,13 +25,15 @@ const DEFAULTS = {
     { label: 'Check profile form', color: 'violet' },
     { label: 'Offline', color: 'slate' },
   ],
-  updates: [
-    { label: 'Disconnect update', color: 'sky' },
-    { label: 'Cycle update', color: 'amber' },
-    { label: 'Load update', color: 'violet' },
-    { label: 'Empty update', color: 'slate' },
-    { label: 'BOL update', color: 'lime' },
+  profileForms: [
+    { label: 'Filled', color: 'lime' },
+    { label: 'Needs update', color: 'amber' },
+    { label: 'Sent to driver', color: 'sky' },
+    { label: 'No response', color: 'slate' },
   ],
+  responsibles: [],
+  me: '',
+  boards: [],
 };
 
 let cache = null;
@@ -59,24 +68,64 @@ function cleanList(list) {
   return out;
 }
 
+/**
+ * Board'lar ro'yxatini tozalaydi. Har biri: {id, name, companies:[companyId]}.
+ * Bitta kompaniya bir nechta boardda bo'lishi mumkin — bu cheklanmaydi.
+ */
+function cleanBoards(list) {
+  if (!Array.isArray(list)) return null;
+  const out = [];
+  const seenId = new Set();
+  for (const item of list) {
+    const name = String(item?.name ?? '').trim().slice(0, 40);
+    if (!name) continue;
+
+    let id = String(item?.id ?? '').trim().slice(0, 40);
+    if (!id || seenId.has(id)) id = randomUUID().slice(0, 8);
+    seenId.add(id);
+
+    const companies = Array.isArray(item?.companies)
+      ? [...new Set(item.companies.map((c) => String(c ?? '').trim()).filter(Boolean))]
+        .slice(0, MAX_BOARD_COMPANIES)
+      : [];
+
+    out.push({ id, name, companies });
+    if (out.length >= MAX_BOARDS) break;
+  }
+  return out;
+}
+
 export async function getConfig(login) {
   const all = await load();
   const cfg = all[login] ?? {};
   return {
     statuses: cfg.statuses ?? DEFAULTS.statuses,
-    updates: cfg.updates ?? DEFAULTS.updates,
+    profileForms: cfg.profileForms ?? DEFAULTS.profileForms,
+    responsibles: cfg.responsibles ?? DEFAULTS.responsibles,
+    me: cfg.me ?? DEFAULTS.me,
+    boards: cfg.boards ?? DEFAULTS.boards,
   };
 }
 
 export async function setConfig(login, input) {
   const all = await load();
   const cur = all[login] ?? {};
+
+  // Berilmagan bo'limlar tegilmaydi — sozlamalar qismlab saqlanishi mumkin.
   const statuses = cleanList(input?.statuses);
-  const updates = cleanList(input?.updates);
+  const profileForms = cleanList(input?.profileForms);
+  const responsibles = cleanList(input?.responsibles);
+  const boards = cleanBoards(input?.boards);
+  const me = input?.me === undefined
+    ? undefined
+    : String(input.me ?? '').trim().slice(0, 60);
 
   all[login] = {
     statuses: statuses ?? cur.statuses ?? DEFAULTS.statuses,
-    updates: updates ?? cur.updates ?? DEFAULTS.updates,
+    profileForms: profileForms ?? cur.profileForms ?? DEFAULTS.profileForms,
+    responsibles: responsibles ?? cur.responsibles ?? DEFAULTS.responsibles,
+    me: me ?? cur.me ?? DEFAULTS.me,
+    boards: boards ?? cur.boards ?? DEFAULTS.boards,
   };
   cache = all;
   await persist();

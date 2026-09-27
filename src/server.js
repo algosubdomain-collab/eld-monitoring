@@ -11,6 +11,7 @@ import { getUpdates, markSent } from './updates.js';
 import { PROVIDERS, getProvider, DEFAULT_PROVIDER } from './providers.js';
 import { onFleetUpdate } from './notifier.js';
 import { pruneResting, refreshRestingIfDue } from './resting.js';
+import { applyDotAlerts } from './dot.js';
 import { getBot, getChat, listChats, sendMessage } from './telegram.js';
 import {
   hasUsers, createUser, verifyUser, ensureDefaultUser, getUser,
@@ -24,7 +25,7 @@ import {
   deleteConnections,
 } from './connections.js';
 import { getRequirements, setRequirement, deleteRequirements } from './requirements.js';
-import { getBoard, patchRow, deleteBoard } from './board.js';
+import { getBoard, patchRow, patchRows, deleteBoard } from './board.js';
 import { getConfig, setConfig, deleteConfig } from './board-config.js';
 
 const PUBLIC_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'public');
@@ -89,6 +90,11 @@ async function refresh(login, provider, cache) {
       console.warn(`[fon] ${login}/${provider}: platforma 0 ta haydovchi qaytardi` +
         (r ? ` (${r.count}/${r.totalCompanies} kompaniyaga ruxsat yo'q)` : ''));
     }
+
+    // Yo'lida DOT tarozisi bor haydovchilarni belgilaymiz. Tarozilar bazasi
+    // lokal keshdan o'qiladi, shuning uchun bu yangilanishni sekinlashtirmaydi.
+    await applyDotAlerts(`${login}:${provider}`, drivers)
+      .catch((err) => console.warn(`[dot] ${err.message}`));
 
     cache.at = Date.now();
     cache.error = null;
@@ -459,6 +465,14 @@ const server = http.createServer(async (req, res) => {
         return json(res, 200, { driverId, row: await patchRow(login, driverId, patch) });
       }
       return json(res, 405, { error: 'Method not allowed' });
+    }
+
+    // Bir nechta qatorga bitta patch — "hammasiga responsible qo'y",
+    // "tekshirildi belgilarini tozala" kabi amallar uchun.
+    if (p === '/api/board/bulk') {
+      if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' });
+      const { driverIds, patch } = await readJson(req);
+      return json(res, 200, { rows: await patchRows(login, driverIds, patch) });
     }
 
     // Haydovchi loglarini tasdiqlash (certify) — haqiqiy compliance amali.

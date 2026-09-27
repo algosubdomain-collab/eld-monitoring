@@ -10,7 +10,8 @@
     "start": "npm run build && node --env-file-if-exists=.env src/server.js",
     "serve": "node --env-file-if-exists=.env src/server.js",
     "probe": "node --env-file-if-exists=.env src/probe.js",
-    "user:reset": "node --env-file-if-exists=.env scripts/reset-password.mjs"
+    "user:reset": "node --env-file-if-exists=.env scripts/reset-password.mjs",
+    "dot:check": "node --env-file-if-exists=.env scripts/dot-check.mjs"
   },
   "engines": {
     "node": ">=20"
