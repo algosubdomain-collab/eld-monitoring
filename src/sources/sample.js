@@ -112,18 +112,25 @@ function makeDriver(i) {
   }
 
   const moving = status === 'driving';
+  const company = pick(r, COMPANIES);
 
   return normalizeDriver({
     driverId: `D-${String(101 + i).padStart(3, '0')}`,
     driverName: `${pick(r, FIRST)} ${pick(r, LAST)}`,
     truck: String(between(r, 1000, 9999)),
-    company: pick(r, COMPANIES),
+    company: company,
+    // Haqiqiy manbalar kabi barqaror companyId — kompaniya filtri va
+    // board'lar shu id bo'yicha ishlaydi.
+    companyId: `C-${COMPANIES.indexOf(company) + 1}`,
     status,
     driveRemainingMin: hos.drive,
     shiftRemainingMin: hos.shift,
     cycleRemainingMin: hos.cycle,
     violations: [...new Set(violations)],
     location: status === 'unknown' ? 'No signal' : pick(r, PLACES),
+    // Namuna koordinatalar — AQSh o'rtasidagi kenglik/uzunlik oralig'i.
+    lat: 32 + r() * 12,
+    lon: -118 + r() * 40,
     speedMph: status === 'unknown' ? null : moving ? between(r, 48, 70) : 0,
     online: status !== 'unknown' && r() > 0.12,
     // Signal vaqti hozirgi vaqtga nisbatan — dashboard "jonli" ko'rinsin.

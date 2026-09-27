@@ -398,6 +398,8 @@ export async function fetchDrivers({
       breakRemainingMin: msToMin(row.break),
       violations: [...(row.violations ?? []), ...(row.errors ?? [])].map(toText).filter(Boolean),
       location: row.calculated_location || (row.lat ? `${row.lat.toFixed(3)}, ${row.lon.toFixed(3)}` : '—'),
+      lat: row.lat ?? null,
+      lon: row.lon ?? null,
       lastUpdate: row.last_sync || null,
       online: row.online !== false,
       eldConnected: row.eld_status === true,
